@@ -7,7 +7,7 @@ class HistoricoStatusSerializer(serializers.ModelSerializer):
         model = HistoricoStatus
         fields = ['status', 'get_status_display', 'observacao_prefeitura', 'foto_resolucao', 'data_atualizacao']
     
-    get_status_display = serializers.CharField(source='get_status_display', read_only=True)
+    get_status_display = serializers.CharField(read_only=True)
 
 class RelatoZeladoriaSerializer(serializers.ModelSerializer):
     # Traz o histórico aninhado (apenas leitura para o cidadão)
