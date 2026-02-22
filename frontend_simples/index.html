@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zeladoria Maricá Cidadão</title>
+
+  <!-- React & ReactDOM (Via CDN) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel para compilar JSX no navegador (Via CDN) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f0f4f8;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .formulario-container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      max-width: 500px;
+      width: 100%;
+    }
+
+    h2 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #34495e;
+    }
+
+    select,
+    textarea,
+    input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 20px;
+      border: 1px solid #bdc3c7;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-family: inherit;
+    }
+
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    button[type="button"] {
+      background-color: #2ecc71;
+      margin-bottom: 10px;
+    }
+
+    button[type="button"]:hover {
+      background-color: #27ae60;
+    }
+
+    .status-mensagem {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      background-color: #e8f8f5;
+      color: #16a085;
+      text-align: center;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const FormularioZeladoria = ({ token, onLogout, onSuccess }) => {
+      const [descricao, setDescricao] = useState('');
+      const [enderecoAproximado, setEnderecoAproximado] = useState('');
+      const [categoria, setCategoria] = useState('');
+      const [foto, setFoto] = useState(null);
+      const [localizacao, setLocalizacao] = useState({ lat: null, lng: null });
+      const [statusEnvio, setStatusEnvio] = useState('');
+
+      const capturarLocalizacao = () => {
+        setStatusEnvio('Buscando localização...');
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              setLocalizacao({
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+              });
+              setStatusEnvio('Localização capturada com sucesso!');
+            },
+            (error) => {
+              console.error("Erro no GPS:", error);
+              setStatusEnvio('Erro: Por favor, permita o acesso à localização.');
+            }
+          );
+        } else {
+          setStatusEnvio('Geolocalização não suportada neste dispositivo.');
+        }
+      };
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!localizacao.lat || !foto) {
+          setStatusEnvio('Por favor, tire uma foto e capture a localização via GPS.');
+          return;
+        }
+
+        setStatusEnvio('Enviando relato para a prefeitura...');
+
+        const formData = new FormData();
+        formData.append('descricao', descricao);
+        formData.append('categoria', categoria);
+        formData.append('endereco_aproximado', enderecoAproximado);
+        formData.append('latitude', parseFloat(localizacao.lat));
+        formData.append('longitude', parseFloat(localizacao.lng));
+        formData.append('foto_problema', foto);
+
+        try {
+          const resposta = await fetch('http://localhost:8000/api/relatos/', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Token ${token}`
+            },
+            body: formData,
+          });
+
+          if (resposta.ok) {
+            setStatusEnvio('Sucesso! O problema foi relatado à prefeitura.');
+            setDescricao('');
+            setEnderecoAproximado('');
+            setFoto(null);
+            setCategoria('');
+            if (onSuccess) onSuccess();
+          } else {
+            console.error("Erro da API:", await resposta.text());
+            setStatusEnvio('Erro ao enviar. Verifique se todos os campos (inclusive endereço) estão preenchidos.');
+          }
+        } catch (erro) {
+          console.error("Erro na requisição:", erro);
+          setStatusEnvio('Erro de conexão com o servidor. A API está rodando?');
+        }
+      };
+
+      return (
+        <div className="formulario-container">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Relatar Problema na Cidade</h2>
+            <button type="button" onClick={onLogout} style={{ width: 'auto', padding: '5px 10px', backgroundColor: '#e74c3c' }}>Sair</button>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div>
+              <label>Selecione o Problema:</label>
+              <select value={categoria} onChange={(e) => setCategoria(e.target.value)} required>
+                <option value="">Selecione...</option>
+                <option value="1">Buraco na Via</option>
+                <option value="2">Lâmpada Queimada</option>
+                <option value="3">Foco de Dengue</option>
+              </select>
+            </div>
+
+            <div>
+              <label>Descrição do Problema:</label>
+              <textarea
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Exemplo: Buraco enorme na faixa da direita..."
+                rows="3"
+                required
+              />
+            </div>
+
+            <div>
+              <label>Endereço / Referência Aproximada:</label>
+              <textarea
+                value={enderecoAproximado}
+                onChange={(e) => setEnderecoAproximado(e.target.value)}
+                placeholder="Ex: Rua das Flores, perto da padaria..."
+                rows="2"
+                required
+              />
+            </div>
+
+            <div>
+              <label>Foto do Local:</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFoto(e.target.files[0])}
+                required
+              />
+            </div>
+
+            <div>
+              <button type="button" onClick={capturarLocalizacao}>
+                📍 Pegar Minha Localização Atual
+              </button>
+              {localizacao.lat && <p style={{ textAlign: 'center', margin: '5px 0 15px', fontSize: '12px', color: '#7f8c8d' }}>
+                GPS: {localizacao.lat.toFixed(5)}, {localizacao.lng.toFixed(5)}
+              </p>}
+            </div>
+
+            <button type="submit">Enviar Relato</button>
+          </form>
+
+          {statusEnvio && <p className="status-mensagem">{statusEnvio}</p>}
+        </div>
+      );
+    };
+
+    const Login = ({ onLoginSuccess }) => {
+      const [username, setUsername] = useState('');
+      const [password, setPassword] = useState('');
+      const [erro, setErro] = useState('');
+
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setErro('Autenticando...');
+
+        try {
+          const resposta = await fetch('http://localhost:8000/api/login/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+          });
+
+          if (resposta.ok) {
+            const data = await resposta.json();
+            onLoginSuccess(data.token);
+          } else {
+            setErro('Acesso Negado. Cidadão não encontrado ou senha incorreta.');
+          }
+        } catch (err) {
+          setErro('Erro ao se conectar com o sistema da Prefeitura.');
+        }
+      };
+
+      return (
+        <div className="formulario-container" style={{ maxWidth: '400px' }}>
+          <h2>Acesso Gov.br / Prefeitura</h2>
+          <form onSubmit={handleLogin}>
+            <div>
+              <label>CPF ou Usuário:</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #bdc3c7', borderRadius: '6px' }}
+              />
+            </div>
+            <div>
+              <label>Senha:</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px', marginBottom: '20px', border: '1px solid #bdc3c7', borderRadius: '6px' }}
+              />
+            </div>
+            <button type="submit">Entrar no Sistema Seguro</button>
+          </form>
+          {erro && <p className="status-mensagem" style={{ backgroundColor: '#fadbd8', color: '#c0392b' }}>{erro}</p>}
+        </div>
+      )
+    };
+
+    const DashboardCidadao = ({ token, onLogout, onChangeView }) => {
+      const [relatos, setRelatos] = useState([]);
+      const [carregando, setCarregando] = useState(true);
+      const [erro, setErro] = useState('');
+
+      React.useEffect(() => {
+        const carregarRelatos = async () => {
+          try {
+            const resposta = await fetch('http://localhost:8000/api/relatos/', {
+              headers: {
+                'Authorization': `Token ${token}`
+              }
+            });
+            if (resposta.ok) {
+              const data = await resposta.json();
+              setRelatos(data);
+            } else {
+              setErro('Erro ao carregar relatos.');
+            }
+          } catch (err) {
+            setErro('Erro de conexão com o servidor.');
+          } finally {
+            setCarregando(false);
+          }
+        };
+
+        carregarRelatos();
+      }, [token]);
+
+      const getStatusColor = (status) => {
+        const cores = {
+          'recebido': '#f39c12',
+          'em_analise': '#3498db',
+          'equipe_despachada': '#9b59b6',
+          'resolvido': '#2ecc71',
+          'rejeitado': '#e74c3c'
+        };
+        return cores[status] || '#95a5a6';
+      };
+
+      return (
+        <div style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'white', padding: '15px 25px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
+            <h2 style={{ margin: 0 }}>Meus Protocolos</h2>
+            <div>
+              <button type="button" onClick={() => onChangeView('novo')} style={{ width: 'auto', padding: '8px 15px', marginRight: '10px' }}>+ Novo Relato</button>
+              <button type="button" onClick={onLogout} style={{ width: 'auto', padding: '8px 15px', backgroundColor: '#e74c3c' }}>Sair</button>
+            </div>
+          </div>
+
+          {carregando && <p style={{ textAlign: 'center' }}>Carregando seus chamados...</p>}
+          {erro && <p className="status-mensagem" style={{ backgroundColor: '#fadbd8', color: '#c0392b' }}>{erro}</p>}
+
+          {!carregando && relatos.length === 0 && !erro && (
+            <div className="formulario-container" style={{ textAlign: 'center', maxWidth: '100%' }}>
+              <p>Você ainda não abriu nenhum chamado de zeladoria.</p>
+              <button onClick={() => onChangeView('novo')} style={{ width: 'auto', marginTop: '10px' }}>Relatar Primeiro Problema</button>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {relatos.map(relato => (
+              <div key={relato.id} style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '15px' }}>
+                  <div>
+                    <h3 style={{ margin: '0 0 5px 0', color: '#2c3e50' }}>{relato.categoria_nome || 'Categoria Desconhecida'}</h3>
+                    <small style={{ color: '#7f8c8d' }}>Protocolo #{relato.id} • Em {new Date(relato.criado_em).toLocaleDateString()}</small>
+                  </div>
+                  <div>
+                    <span style={{
+                      backgroundColor: getStatusColor(relato.status_atual),
+                      color: 'white',
+                      padding: '5px 12px',
+                      borderRadius: '20px',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {relato.status_display || relato.status_atual}
+                    </span>
+                  </div>
+                </div>
+
+                <p style={{ color: '#34495e', marginBottom: '20px' }}>{relato.descricao}</p>
+
+                {relato.historico && relato.historico.length > 0 && (
+                  <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 10px 0', color: '#7f8c8d', fontSize: '14px' }}>HISTÓRICO DE ANDAMENTO</h4>
+                    <ul style={{ paddingLeft: '20px', margin: 0, color: '#2c3e50', fontSize: '14px' }}>
+                      {relato.historico.map((hist, idx) => (
+                        <li key={idx} style={{ marginBottom: '8px' }}>
+                          <strong>{new Date(hist.data_atualizacao).toLocaleDateString()}:</strong> {hist.observacao_prefeitura}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const AppWrapper = () => {
+      const [token, setToken] = useState(localStorage.getItem('marica_token') || null);
+      const [view, setView] = useState('lista'); // 'lista' ou 'novo'
+
+      const handleLogin = (newToken) => {
+        localStorage.setItem('marica_token', newToken);
+        setToken(newToken);
+        setView('lista');
+      };
+
+      const handleLogout = () => {
+        localStorage.removeItem('marica_token');
+        setToken(null);
+      };
+
+      if (!token) {
+        return <Login onLoginSuccess={handleLogin} />
+      }
+
+      if (view === 'novo') {
+        return (
+          <div style={{ width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <button onClick={() => setView('lista')} style={{ backgroundColor: '#95a5a6', width: 'auto' }}>← Voltar para Meus Protocolos</button>
+            </div>
+            <FormularioZeladoria token={token} onLogout={handleLogout} onSuccess={() => setView('lista')} />
+          </div>
+        );
+      }
+
+      return <DashboardCidadao token={token} onLogout={handleLogout} onChangeView={setView} />
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<AppWrapper />);
+  </script>
+</body>
+
+</html>
