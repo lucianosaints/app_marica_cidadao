@@ -6,8 +6,12 @@ from django.utils.decorators import method_decorator
 import os
 from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import RelatoZeladoria
-from .serializers import RelatoZeladoriaSerializer, UserRegistrationSerializer
+from .models import RelatoZeladoria, CategoriaProblema
+from .serializers import (
+    RelatoZeladoriaSerializer, 
+    UserRegistrationSerializer, 
+    CategoriaProblemaSerializer
+)
 
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -41,6 +45,15 @@ class CustomObtainAuthToken(ObtainAuthToken):
             })
         
         return Response({'error': 'Cidadão não encontrado ou senha incorreta.'}, status=400)
+
+class CategoriaProblemaViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Lista as categorias disponíveis para o cidadão selecionar no formulário.
+    """
+    queryset = CategoriaProblema.objects.all()
+    serializer_class = CategoriaProblemaSerializer
+    permission_classes = [permissions.AllowAny] # Aberto para o formulário de cadastro/relato funcionar sem travas
+    authentication_classes = [] # Evita problemas de CSRF/Token inicial
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterUserView(generics.CreateAPIView):

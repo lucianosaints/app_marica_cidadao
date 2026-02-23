@@ -204,6 +204,7 @@
       const [statusEnvio, setStatusEnvio] = useState('');
       const [isCapturandoGps, setIsCapturandoGps] = useState(false);
       const [localizacaoConfirmada, setLocalizacaoConfirmada] = useState(false);
+      const [listaCategorias, setListaCategorias] = useState([]);
 
       const mapRef = React.useRef(null);
       const markerRef = React.useRef(null);
@@ -231,6 +232,12 @@
             setStatusEnvio(''); // Limpa erro ao ajustar manualmente
           });
         }
+
+        // Busca categorias da API
+        fetch('/api/categorias/')
+          .then(res => res.json())
+          .then(data => setListaCategorias(data))
+          .catch(err => console.error("Erro ao carregar categorias:", err));
 
         // Tenta capturar o GPS automaticamente ao abrir o formulário
         capturarLocalizacao();
@@ -371,11 +378,9 @@
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '16px', backgroundColor: 'white' }}
                 >
                   <option value="">Selecione uma categoria...</option>
-                  <option value="1">🛤️ Buraco na Via</option>
-                  <option value="2">💡 Lâmpada Queimada</option>
-                  <option value="3">🦟 Foco de Dengue</option>
-                  <option value="4">🌳 Poda de Árvore</option>
-                  <option value="5">🗑️ Acúmulo de Lixo</option>
+                  {listaCategorias.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                  ))}
                 </select>
               </div>
 

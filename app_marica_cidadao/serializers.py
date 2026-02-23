@@ -59,6 +59,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
+class CategoriaProblemaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CategoriaProblema
+        fields = ['id', 'nome', 'descricao']
+
+
 class HistoricoStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = HistoricoStatus
