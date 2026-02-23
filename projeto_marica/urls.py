@@ -26,7 +26,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', RedirectView.as_view(url='/api/relatos/', permanent=False)),
+    # path('', RedirectView.as_view(url='/api/relatos/', permanent=False)), # Removido para servir o frontend
     path('api/login/', CustomObtainAuthToken.as_view(), name='api_token_auth'),
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
