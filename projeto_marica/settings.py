@@ -28,6 +28,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-key-change-m
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [h.strip() for h in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')]
+ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app']  # Permite domínios ngrok
 
 
 # Application definition
@@ -146,7 +147,9 @@ CORS_ALLOW_ALL_ORIGINS = True
 # CSRF Trusted Origins para o IP da AWS
 CSRF_TRUSTED_ORIGINS = [
     "http://54.94.109.90:8000",
-    "http://54.94.109.90"
+    "http://54.94.109.90",
+    "https://*.ngrok.io",
+    "https://*.ngrok-free.app"
 ]
 
 # LOGGING para ver erros 500 no terminal (docker logs)
