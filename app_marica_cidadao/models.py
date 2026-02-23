@@ -76,7 +76,9 @@ class HistoricoStatus(models.Model):
     data_atualizacao = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-data_atualizacao'] # Ordena do mais recente para o mais antigo
+        ordering = ['-data_atualizacao']
+        verbose_name = "Histórico de Status"
+        verbose_name_plural = "Históricos de Status"
 
     def __str__(self):
         return f"Atualização #{self.id} para Relato #{self.relato.id}"
