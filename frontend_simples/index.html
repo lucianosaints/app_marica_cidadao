@@ -203,6 +203,7 @@
       const [enderecoAproximado, setEnderecoAproximado] = useState('');
       const [statusEnvio, setStatusEnvio] = useState('');
       const [isCapturandoGps, setIsCapturandoGps] = useState(false);
+      const [localizacaoConfirmada, setLocalizacaoConfirmada] = useState(false);
 
       const mapRef = React.useRef(null);
       const markerRef = React.useRef(null);
@@ -226,6 +227,8 @@
               lat: position.lat,
               lng: position.lng,
             });
+            setLocalizacaoConfirmada(true);
+            setStatusEnvio(''); // Limpa erro ao ajustar manualmente
           });
         }
 
@@ -256,11 +259,12 @@
               }
 
               setStatusEnvio('📍 Localização capturada com sucesso!');
+              setLocalizacaoConfirmada(true);
               setIsCapturandoGps(false);
             },
             (error) => {
               console.error("Erro no GPS:", error);
-              setStatusEnvio('❌ Erro: Por favor, permita o acesso à localização.');
+              setStatusEnvio('⚠️ O GPS automático falhou (comum em conexões não-seguras). Por favor, AJUSTE O ALFINETE NO MAPA para o local correto.');
               setIsCapturandoGps(false);
             },
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
@@ -430,7 +434,7 @@
                     Ajuste o alfinete azul no mapa para o local exato.
                   </p>
 
-                  {localizacao.lat && !isCapturandoGps && <p style={{ margin: '0', fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>
+                  {localizacaoConfirmada && !isCapturandoGps && <p style={{ margin: '0', fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>
                     ✅ Localização Fixada!
                   </p>}
                 </div>
