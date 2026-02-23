@@ -219,7 +219,7 @@ JAZZMIN_SETTINGS = {
     "user_avatar": None,
     "topmenu_links": [
         {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "Site Maricá Cidadão", "url": "http://127.0.0.1:3000", "new_window": True},
+        {"name": "Site Maricá Cidadão", "url": "http://54.94.109.90:8000", "new_window": True},
         {"model": "auth.User"},
     ],
     "show_sidebar": True,

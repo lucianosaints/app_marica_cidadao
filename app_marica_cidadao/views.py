@@ -1,3 +1,7 @@
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.conf import settings
+import os
 from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RelatoZeladoria
