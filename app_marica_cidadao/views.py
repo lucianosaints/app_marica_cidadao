@@ -17,6 +17,7 @@ from django.contrib.auth.models import User
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CustomObtainAuthToken(ObtainAuthToken):
+    authentication_classes = []  # Evita CSRF check
     def post(self, request, *args, **kwargs):
         username_input = request.data.get('username')
         password = request.data.get('password')
@@ -46,6 +47,7 @@ class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.none()
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []  # Evita CSRF check
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
