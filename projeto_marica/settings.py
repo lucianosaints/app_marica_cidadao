@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     
     # Apps do Projeto
     'app_marica_cidadao',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -144,6 +145,19 @@ CORS_ALLOW_HEADERS = [
     "x-csrftoken",
     "x-requested-with",
 ]
+
+# Configuração do Django REST Framework para Documentação
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Configurações do Swagger (UI)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'API Maricá Cidadão',
+    'DESCRIPTION': 'Documentação automática do sistema de Zeladoria Urbana de Maricá.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

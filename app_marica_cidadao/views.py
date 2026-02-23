@@ -1,7 +1,43 @@
-from rest_framework import viewsets, permissions, authentication
+from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RelatoZeladoria
-from .serializers import RelatoZeladoriaSerializer
+from .serializers import RelatoZeladoriaSerializer, UserRegistrationSerializer
+
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+
+class CustomObtainAuthToken(ObtainAuthToken):
+    def post(self, request, *args, **kwargs):
+        username_input = request.data.get('username')
+        password = request.data.get('password')
+
+        # 1. Tenta autenticar pelo username (padrão)
+        user = authenticate(username=username_input, password=password)
+
+        # 2. Se falhar, tenta buscar por email (pode haver mais de um)
+        if user is None:
+            users_with_email = User.objects.filter(email=username_input)
+            for u in users_with_email:
+                user = authenticate(username=u.username, password=password)
+                if user:
+                    break
+
+        if user:
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'username': user.username
+            })
+        
+        return Response({'error': 'Cidadão não encontrado ou senha incorreta.'}, status=400)
+
+class RegisterUserView(generics.CreateAPIView):
+    queryset = RelatoZeladoria.objects.none() # Necessário para generics, mas não usado
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [permissions.AllowAny]
 
 class RelatoZeladoriaViewSet(viewsets.ModelViewSet):
     serializer_class = RelatoZeladoriaSerializer
