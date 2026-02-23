@@ -290,7 +290,7 @@
         formData.append('foto_problema', foto);
 
         try {
-          const resposta = await fetch('http://127.0.0.1:8000/api/relatos/', {
+          const resposta = await fetch('/api/relatos/', {
             method: 'POST',
             headers: {
               'Authorization': `Token ${token}`
