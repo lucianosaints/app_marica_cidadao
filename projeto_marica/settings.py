@@ -30,6 +30,10 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = [h.strip() for h in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')]
 ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev']  # Permite domínios ngrok
 
+# Essencial para rodar atrás de ngrok/proxy HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 
 # Application definition
 

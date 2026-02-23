@@ -322,7 +322,7 @@
           }
         } catch (erro) {
           console.error("Erro na requisição:", erro);
-          setStatusEnvio('❌ Erro de conexão com o servidor. A API está rodando?');
+          setStatusEnvio(`❌ Erro de conexão: ${erro.message}. A API está rodando?`);
         }
       };
 
