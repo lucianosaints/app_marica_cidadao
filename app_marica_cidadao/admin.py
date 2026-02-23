@@ -1,9 +1,28 @@
 from django.contrib import admin
-from .models import CategoriaProblema, RelatoZeladoria, HistoricoStatus
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.models import User
+from .models import CategoriaProblema, RelatoZeladoria, HistoricoStatus, PerfilCidadao
+
+class PerfilCidadaoInline(admin.StackedInline):
+    model = PerfilCidadao
+    can_delete = False
+    verbose_name_plural = 'Perfil do Cidadão'
+
+class UserAdmin(BaseUserAdmin):
+    inlines = (PerfilCidadaoInline,)
+
+# Re-registrar UserAdmin
+admin.site.unregister(User)
+admin.site.register(User, UserAdmin)
+
+@admin.register(PerfilCidadao)
+class PerfilCidadaoAdmin(admin.ModelAdmin):
+    list_display = ('user', 'cpf', 'telefone', 'cidade')
+    search_fields = ('user__username', 'cpf', 'user__email')
 
 class HistoricoStatusInline(admin.TabularInline):
     model = HistoricoStatus
-    extra = 1
+    extra = 0
 
 @admin.register(CategoriaProblema)
 class CategoriaProblemaAdmin(admin.ModelAdmin):

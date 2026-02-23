@@ -1,22 +1,63 @@
 from rest_framework import serializers
 
 from django.contrib.auth.models import User
-from .models import CategoriaProblema, RelatoZeladoria, HistoricoStatus
+from .models import CategoriaProblema, RelatoZeladoria, HistoricoStatus, PerfilCidadao
+from django.db import transaction
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    
+    # Novos campos do perfil (write_only pois não existem no modelo User diretamente)
+    cpf = serializers.CharField(max_length=14, write_only=True)
+    telefone = serializers.CharField(max_length=20, required=False, allow_blank=True, write_only=True)
+    data_nascimento = serializers.DateField(required=False, allow_null=True, write_only=True)
+    cep = serializers.CharField(max_length=9, required=False, allow_blank=True, write_only=True)
+    logradouro = serializers.CharField(max_length=255, required=False, allow_blank=True, write_only=True)
+    numero = serializers.CharField(max_length=20, required=False, allow_blank=True, write_only=True)
+    bairro = serializers.CharField(max_length=100, required=False, allow_blank=True, write_only=True)
+    cidade = serializers.CharField(max_length=100, default='Maricá', write_only=True)
+    comprovante_titularidade = serializers.FileField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = [
+            'username', 'email', 'password', 'first_name', 'last_name',
+            'cpf', 'telefone', 'data_nascimento', 'cep', 'logradouro', 
+            'numero', 'bairro', 'cidade', 'comprovante_titularidade'
+        ]
+
+    def validate_cpf(self, value):
+        if PerfilCidadao.objects.filter(cpf=value).exists():
+            raise serializers.ValidationError("Este CPF já está cadastrado.")
+        return value
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            password=validated_data['password']
-        )
+        # Extrair dados do perfil
+        perfil_data = {
+            'cpf': validated_data.pop('cpf'),
+            'telefone': validated_data.pop('telefone', ''),
+            'data_nascimento': validated_data.pop('data_nascimento', None),
+            'cep': validated_data.pop('cep', ''),
+            'logradouro': validated_data.pop('logradouro', ''),
+            'numero': validated_data.pop('numero', ''),
+            'bairro': validated_data.pop('bairro', ''),
+            'cidade': validated_data.pop('cidade', 'Maricá'),
+            'comprovante_titularidade': validated_data.pop('comprovante_titularidade', None),
+        }
+
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=validated_data['username'],
+                email=validated_data.get('email', ''),
+                password=validated_data['password'],
+                first_name=validated_data.get('first_name', ''),
+                last_name=validated_data.get('last_name', '')
+            )
+            
+            PerfilCidadao.objects.create(user=user, **perfil_data)
+            
         return user
+
 
 class HistoricoStatusSerializer(serializers.ModelSerializer):
     class Meta:

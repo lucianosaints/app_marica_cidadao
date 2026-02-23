@@ -287,7 +287,7 @@
         formData.append('foto_problema', foto);
 
         try {
-          const resposta = await fetch('http://localhost:8000/api/relatos/', {
+          const resposta = await fetch('http://127.0.0.1:8000/api/relatos/', {
             method: 'POST',
             headers: {
               'Authorization': `Token ${token}`
@@ -471,6 +471,18 @@
       const [username, setUsername] = useState('');
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
+      const [firstName, setFirstName] = useState('');
+      const [lastName, setLastName] = useState('');
+      const [cpf, setCpf] = useState('');
+      const [telefone, setTelefone] = useState('');
+      const [dataNascimento, setDataNascimento] = useState('');
+      const [cep, setCep] = useState('');
+      const [logradouro, setLogradouro] = useState('');
+      const [numero, setNumero] = useState('');
+      const [bairro, setBairro] = useState('');
+      const [cidade, setCidade] = useState('Maricá');
+      const [comprovante, setComprovante] = useState(null);
+
       const [status, setStatus] = useState('');
       const [isLoading, setIsLoading] = useState(false);
 
@@ -479,128 +491,122 @@
         setIsLoading(true);
         setStatus('Criando sua conta...');
 
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('email', email);
+        formData.append('password', password);
+        formData.append('first_name', firstName);
+        formData.append('last_name', lastName);
+        formData.append('cpf', cpf);
+        formData.append('telefone', telefone);
+        formData.append('data_nascimento', dataNascimento);
+        formData.append('cep', cep);
+        formData.append('logradouro', logradouro);
+        formData.append('numero', numero);
+        formData.append('bairro', bairro);
+        formData.append('cidade', cidade);
+        if (comprovante) {
+          formData.append('comprovante_titularidade', comprovante);
+        }
+
         try {
-          const resposta = await fetch('http://localhost:8000/api/cadastro/', {
+          const resposta = await fetch('http://127.0.0.1:8000/api/cadastro/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, email, password })
+            body: formData
           });
 
           if (resposta.ok) {
-            setStatus('Conta criada com sucesso! Redirecionando para o login...');
+            setStatus('✅ Conta criada com sucesso! Redirecionando para o login...');
             setTimeout(() => {
               onCadastroSuccess();
             }, 2000);
           } else {
             const data = await resposta.json();
-            setStatus(`Erro: ${JSON.stringify(data)}`);
+            console.error("Erro no cadastro:", data);
+            setStatus(`❌ Erro: ${JSON.stringify(data)}`);
           }
         } catch (err) {
-          setStatus('Erro ao se conectar com o servidor.');
+          console.error("Erro de conexão detalhado:", err);
+          setStatus(`❌ Erro de conexão com o servidor. Verifique o terminal do backend. (Erro: ${err.message})`);
         } finally {
           setIsLoading(false);
         }
       };
 
       return (
-        <div className="formulario-container" style={{ padding: '30px 25px' }}>
+        <div className="formulario-container" style={{ padding: '30px 25px', maxWidth: '500px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '25px' }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
               <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '45px' }} />
               <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '45px' }} />
             </div>
             <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '22px' }}>Cadastro de Cidadão</h2>
-            <p style={{ margin: '5px 0 0', color: '#7f8c8d', fontSize: '14px' }}>Crie sua conta para participar da zeladoria.</p>
+            <p style={{ margin: '5px 0 0', color: '#7f8c8d', fontSize: '14px' }}>Crie sua conta completa para acessar os serviços.</p>
           </div>
 
-          <form onSubmit={handleCadastro} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e', fontSize: '14px' }}>👤 Nome de Usuário / CPF:</label>
-              <input
-                type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                placeholder="Ex: luciano123"
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', outline: 'none', transition: 'box-shadow 0.3s' }}
-                required
-                disabled={isLoading}
-              />
+          <form onSubmit={handleCadastro} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {/* Dados de Acesso */}
+            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>🔐 Dados de Acesso</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Usuário (Login)" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e', fontSize: '14px' }}>✉️ E-mail:</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="seuemail@exemplo.com"
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', outline: 'none', transition: 'box-shadow 0.3s' }}
-                required
-                disabled={isLoading}
-              />
+
+            {/* Dados Pessoais */}
+            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>👤 Dados Pessoais</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nome" required disabled={isLoading} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Sobrenome" required disabled={isLoading} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                <input type="text" value={cpf} onChange={e => setCpf(e.target.value)} placeholder="CPF (000.000.000-00)" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input type="text" value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="Telefone" disabled={isLoading} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                  <input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} title="Data de Nascimento" disabled={isLoading} style={{ flex: 1, padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                </div>
+              </div>
             </div>
-            <div>
-              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e', fontSize: '14px' }}>🔒 Senha:</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="Digite uma senha segura"
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', outline: 'none', transition: 'box-shadow 0.3s' }}
-                required
-                disabled={isLoading}
-              />
+
+            {/* Endereço */}
+            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>🏠 Endereço</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
+                <input type="text" value={cep} onChange={e => setCep(e.target.value)} placeholder="CEP" disabled={isLoading} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                <input type="text" value={logradouro} onChange={e => setLogradouro(e.target.value)} placeholder="Rua/Logradouro" disabled={isLoading} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px', marginTop: '10px' }}>
+                <input type="text" value={numero} onChange={e => setNumero(e.target.value)} placeholder="Nº" disabled={isLoading} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} placeholder="Bairro" disabled={isLoading} style={{ padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+              </div>
+              <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade" disabled={isLoading} style={{ width: '100%', marginTop: '10px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+            </div>
+
+            {/* Comprovante */}
+            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>📄 Comprovante de Imóvel (Opcional)</h3>
+              <input type="file" onChange={e => setComprovante(e.target.files[0])} disabled={isLoading} style={{ width: '100%', fontSize: '12px' }} />
+              <p style={{ margin: '5px 0 0', fontSize: '10px', color: '#95a5a6' }}>Caso a ação seja em local privado.</p>
             </div>
 
             <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                type="submit"
-                disabled={isLoading}
-                style={{
-                  padding: '15px',
-                  fontSize: '16px',
-                  fontWeight: 'bold',
-                  backgroundColor: '#0097e6',
-                  boxShadow: '0 4px 10px rgba(0, 151, 230, 0.3)',
-                  borderRadius: '10px',
-                  border: 'none',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {isLoading ? '⌛ Cadastrando...' : 'Criar Minha Conta 🚀'}
+              <button type="submit" disabled={isLoading} style={{ padding: '15px', fontSize: '18px', fontWeight: 'bold', backgroundColor: '#2ecc71', color: 'white', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 10px rgba(46, 204, 113, 0.3)' }}>
+                {isLoading ? '⌛ Cadastrando...' : 'Finalizar Cadastro 🚀'}
               </button>
-              <button
-                type="button"
-                onClick={onBackToLogin}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#7f8c8d',
-                  border: '1px solid #dcdde1',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontSize: '14px'
-                }}
-                disabled={isLoading}
-              >
+              <button type="button" onClick={onBackToLogin} style={{ backgroundColor: 'transparent', color: '#7f8c8d', border: '1px solid #dcdde1', padding: '10px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }} disabled={isLoading}>
                 Já tenho conta. Voltar ao Login
               </button>
             </div>
           </form>
 
-          {status && <div className="status-mensagem" style={{
-            marginTop: '20px',
-            padding: '12px',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            textAlign: 'center',
-            backgroundColor: status.includes('Erro') ? '#fff5f5' : '#f0fff4',
-            color: status.includes('Erro') ? '#c53030' : '#2f855a',
-            border: `1px solid ${status.includes('Erro') ? '#feb2b2' : '#9ae6b4'}`
-          }}>{status}</div>}
+          {status && <div className="status-mensagem" style={{ marginTop: '20px', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center', backgroundColor: status.includes('❌') ? '#fff5f5' : '#f0fff4', color: status.includes('❌') ? '#c53030' : '#2f855a', border: `1px solid ${status.includes('❌') ? '#feb2b2' : '#9ae6b4'}` }}>{status}</div>}
         </div>
       );
     };
+
 
     const Login = ({ onLoginSuccess, onGoToCadastro }) => {
       const [username, setUsername] = useState('');
@@ -612,7 +618,7 @@
         setErro('Autenticando...');
 
         try {
-          const resposta = await fetch('http://localhost:8000/api/login/', {
+          const resposta = await fetch('http://127.0.0.1:8000/api/login/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -645,7 +651,7 @@
               <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '40px' }} />
               <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '40px' }} />
             </div>
-            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#2c3e50' }}>Maricá 360</h2>
+            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#2c3e50' }}>Maricá Cidadão</h2>
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div>
                 <label style={{ fontSize: '14px', marginBottom: '5px' }}>👤 CPF ou Usuário:</label>
@@ -708,7 +714,7 @@
       React.useEffect(() => {
         const carregarRelatos = async () => {
           try {
-            const resposta = await fetch('http://localhost:8000/api/relatos/', {
+            const resposta = await fetch('http://127.0.0.1:8000/api/relatos/', {
               headers: { 'Authorization': `Token ${token}` }
             });
             if (resposta.ok) {

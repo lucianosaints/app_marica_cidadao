@@ -35,9 +35,19 @@ class CustomObtainAuthToken(ObtainAuthToken):
         return Response({'error': 'Cidadão não encontrado ou senha incorreta.'}, status=400)
 
 class RegisterUserView(generics.CreateAPIView):
-    queryset = RelatoZeladoria.objects.none() # Necessário para generics, mas não usado
+    queryset = User.objects.none()
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            print("=== ERRO CRÍTICO NO CADASTRO ===")
+            print(traceback.format_exc())
+            return Response({"detail": str(e)}, status=500)
 
 class RelatoZeladoriaViewSet(viewsets.ModelViewSet):
     serializer_class = RelatoZeladoriaSerializer

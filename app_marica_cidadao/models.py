@@ -70,6 +70,7 @@ class HistoricoStatus(models.Model):
         User, 
         on_delete=models.SET_NULL, 
         null=True, 
+        blank=True,
         help_text="Servidor da prefeitura que atualizou o status"
     )
     data_atualizacao = models.DateTimeField(auto_now_add=True)
@@ -79,3 +80,31 @@ class HistoricoStatus(models.Model):
 
     def __str__(self):
         return f"Atualização #{self.id} para Relato #{self.relato.id}"
+
+
+class PerfilCidadao(models.Model):
+    """
+    Extensão do modelo User para armazenar dados adicionais do cidadão.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
+    cpf = models.CharField(max_length=14, unique=True, help_text="CPF formatado (ex: 000.000.000-00)")
+    telefone = models.CharField(max_length=20, blank=True, null=True)
+    data_nascimento = models.DateField(blank=True, null=True)
+    
+    # Endereço
+    cep = models.CharField(max_length=9, blank=True, null=True)
+    logradouro = models.CharField(max_length=255, blank=True, null=True)
+    numero = models.CharField(max_length=20, blank=True, null=True)
+    bairro = models.CharField(max_length=100, blank=True, null=True)
+    cidade = models.CharField(max_length=100, default='Maricá')
+    
+    # Documentação opcional
+    comprovante_titularidade = models.FileField(
+        upload_to='comprovantes_titularidade/', 
+        blank=True, 
+        null=True,
+        help_text="Opcional: Comprovante de titularidade de imóvel caso a ação seja em local privado"
+    )
+
+    def __str__(self):
+        return f"Perfil de {self.user.username} (CPF: {self.cpf})"

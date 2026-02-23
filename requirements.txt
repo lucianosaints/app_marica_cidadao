@@ -1,0 +1,9 @@
+django>=5.0,<6.0
+djangorestframework
+django-cors-headers
+pillow
+django-jazzmin
+drf-spectacular
+gunicorn
+python-decouple
+dj-database-url

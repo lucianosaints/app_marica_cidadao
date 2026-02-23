@@ -1,0 +1,89 @@
+/* Estilos Customizados para o Painel Administrativo Maricá Cidadão */
+
+/* Personalização de Botões */
+.btn {
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease !important;
+    text-transform: none !important;
+    /* Mantém texto natural */
+    border: none !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* Cores de Botões - Sincronizadas com o Azul Dashboard */
+.btn-primary,
+.btn-success,
+.btn-info {
+    background-color: #0097e6 !important;
+    /* Azul Maricá vibrante igual ao Dashboard */
+    color: white !important;
+}
+
+.btn-primary:hover,
+.btn-success:hover,
+.btn-info:hover {
+    background-color: #00a8ff !important;
+    /* Tom levemente mais claro no hover */
+}
+
+.btn-danger {
+    background-color: #e74c3c !important;
+}
+
+.btn-warning {
+    background-color: #f1c40f !important;
+    color: white !important;
+}
+
+/* Estilo para Inlines e Tabelas */
+.card {
+    border-radius: 12px !important;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Sidebar Ajustes */
+.nav-sidebar .nav-link.active {
+    background-color: #3498db !important;
+    border-radius: 8px !important;
+    margin: 2px 5px !important;
+}
+
+/* Customização da Logo e Título na Sidebar */
+.brand-link {
+    padding: 15px 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    background-color: #0097e6 !important;
+    /* Fundo azul consistente */
+}
+
+.brand-image {
+    max-height: 40px !important;
+    width: auto !important;
+    margin-top: 0 !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    float: none !important;
+    opacity: 1 !important;
+}
+
+.brand-text {
+    display: none !important;
+}
+
+/* Customização da Barra Superior */
+.main-header {
+    border-bottom: 2px solid #3498db !important;
+}

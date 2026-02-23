@@ -7,6 +7,6 @@ router = DefaultRouter()
 router.register(r'relatos', RelatoZeladoriaViewSet, basename='relato')
 
 urlpatterns = [
-    path('api/cadastro/', RegisterUserView.as_view(), name='registrar_usuario'),
-    path('api/', include(router.urls)),
+    path('cadastro/', RegisterUserView.as_view(), name='registrar_usuario'),
+    path('', include(router.urls)),
 ]

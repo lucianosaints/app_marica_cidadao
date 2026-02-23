@@ -30,7 +30,7 @@ urlpatterns = [
     path('api/login/', CustomObtainAuthToken.as_view(), name='api_token_auth'),
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
     path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('', include('app_marica_cidadao.urls')),
+    path('api/', include('app_marica_cidadao.urls')),
 ]
 
 if settings.DEBUG:
