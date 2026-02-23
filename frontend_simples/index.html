@@ -534,14 +534,14 @@
       };
 
       return (
-        <div className="formulario-container" style={{ padding: '30px 25px', maxWidth: '500px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '25px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginBottom: '15px', flexWrap: 'wrap', textAlign: 'center' }}>
-              <img src="logo/Logo-prefeitura.png" alt="Prefeitura" style={{ height: '40px', maxWidth: '160px', objectFit: 'contain' }} />
-              <img src="logo/Logo-Ictim.png" alt="Ictim" style={{ height: '40px', maxWidth: '160px', objectFit: 'contain' }} />
+        <div className="formulario-container" style={{ padding: '30px 15px', maxWidth: '500px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+              <img src="logo/Logo-prefeitura.png" alt="Prefeitura" style={{ height: '35px', maxWidth: '140px', objectFit: 'contain' }} />
+              <img src="logo/Logo-Ictim.png" alt="Ictim" style={{ height: '35px', maxWidth: '140px', objectFit: 'contain' }} />
             </div>
-            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '22px' }}>Cadastro de Cidadão</h2>
-            <p style={{ margin: '5px 0 0', color: '#7f8c8d', fontSize: '14px' }}>Crie sua conta completa para acessar os serviços.</p>
+            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '20px', textAlign: 'center' }}>Cadastro de Cidadão</h2>
+            <p style={{ margin: '5px 0 0', color: '#7f8c8d', fontSize: '13px', textAlign: 'center' }}>Crie sua conta completa para acessar os serviços.</p>
           </div>
 
           <form onSubmit={handleCadastro} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -558,7 +558,7 @@
             {/* Dados Pessoais */}
             <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
               <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>👤 Dados Pessoais</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
                 <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nome" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
                 <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Sobrenome" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
               </div>
