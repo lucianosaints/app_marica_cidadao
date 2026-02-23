@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.http import HttpResponse
 from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 import os
 from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -13,6 +15,7 @@ from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CustomObtainAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         username_input = request.data.get('username')
@@ -38,6 +41,7 @@ class CustomObtainAuthToken(ObtainAuthToken):
         
         return Response({'error': 'Cidadão não encontrado ou senha incorreta.'}, status=400)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterUserView(generics.CreateAPIView):
     queryset = User.objects.none()
     serializer_class = UserRegistrationSerializer
@@ -55,7 +59,7 @@ class RegisterUserView(generics.CreateAPIView):
 
 class RelatoZeladoriaViewSet(viewsets.ModelViewSet):
     serializer_class = RelatoZeladoriaSerializer
-    authentication_classes = [authentication.TokenAuthentication, authentication.SessionAuthentication]
+    authentication_classes = [authentication.TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
     # Importante: Permite receber arquivos de imagem (FormData do React)
@@ -80,6 +84,7 @@ class RelatoZeladoriaViewSet(viewsets.ModelViewSet):
             print(serializer.errors)
         return super().create(request, *args, **kwargs)
 
+@csrf_exempt
 def frontend_view(request):
     """
     Serve o arquivo index.html do frontend sem usar o motor de templates do Django,
