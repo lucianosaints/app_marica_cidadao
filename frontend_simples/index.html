@@ -513,7 +513,7 @@
         }
 
         try {
-          const resposta = await fetch('http://127.0.0.1:8000/api/cadastro/', {
+          const resposta = await fetch('/api/cadastro/', {
             method: 'POST',
             body: formData
           });
@@ -621,7 +621,7 @@
         setErro('Autenticando...');
 
         try {
-          const resposta = await fetch('http://127.0.0.1:8000/api/login/', {
+          const resposta = await fetch('/api/login/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -717,7 +717,7 @@
       React.useEffect(() => {
         const carregarRelatos = async () => {
           try {
-            const resposta = await fetch('http://127.0.0.1:8000/api/relatos/', {
+            const resposta = await fetch('/api/relatos/', {
               headers: { 'Authorization': `Token ${token}` }
             });
             if (resposta.ok) {
