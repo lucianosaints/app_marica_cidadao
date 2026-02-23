@@ -232,6 +232,9 @@
           });
         }
 
+        // Tenta capturar o GPS automaticamente ao abrir o formulário
+        capturarLocalizacao();
+
         return () => {
           if (mapRef.current) {
             mapRef.current.remove();
