@@ -79,3 +79,16 @@ class RelatoZeladoriaViewSet(viewsets.ModelViewSet):
             print("=== ERROS DE VALIDAÇÃO DO SERIALIZER ===")
             print(serializer.errors)
         return super().create(request, *args, **kwargs)
+
+def frontend_view(request):
+    """
+    Serve o arquivo index.html do frontend sem usar o motor de templates do Django,
+    evitando conflitos com a sintaxe JSX (chaves duplas).
+    """
+    index_path = os.path.join(settings.BASE_DIR, 'frontend_simples', 'index.html')
+    try:
+        with open(index_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return HttpResponse(content, content_type='text/html')
+    except FileNotFoundError:
+        return HttpResponse("Frontend index.html não encontrado.", status=404)
