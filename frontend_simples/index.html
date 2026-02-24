@@ -229,8 +229,13 @@
               lng: position.lng,
             });
             setLocalizacaoConfirmada(true);
-            setStatusEnvio(''); // Limpa erro ao ajustar manualmente
+            setStatusEnvio('');
           });
+
+          // Tenta capturar o GPS assim que o mapa estiver pronto
+          setTimeout(() => {
+            capturarLocalizacao();
+          }, 500);
         }
 
         // Busca categorias da API
@@ -238,9 +243,6 @@
           .then(res => res.json())
           .then(data => setListaCategorias(data))
           .catch(err => console.error("Erro ao carregar categorias:", err));
-
-        // Tenta capturar o GPS automaticamente ao abrir o formulário
-        capturarLocalizacao();
 
         return () => {
           if (mapRef.current) {
