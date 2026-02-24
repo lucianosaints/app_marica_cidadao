@@ -28,7 +28,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-key-change-m
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [h.strip() for h in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')]
-ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev']  # Permite domínios ngrok
+ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev', '147.15.17.209']  # Permite domínios ngrok e OCI
 
 # Essencial para rodar atrás de ngrok/proxy HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -152,6 +152,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 CSRF_TRUSTED_ORIGINS = [
     "http://54.94.109.90:8000",
     "http://54.94.109.90",
+    "http://147.15.17.209:8000",
+    "http://147.15.17.209",
     "https://*.ngrok.io",
     "https://*.ngrok-free.app",
     "https://*.ngrok-free.dev"
@@ -227,7 +229,7 @@ JAZZMIN_SETTINGS = {
     "user_avatar": None,
     "topmenu_links": [
         {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "Site Maricá Cidadão", "url": "http://54.94.109.90:8000", "new_window": True},
+        {"name": "Site Maricá Cidadão", "url": "/", "new_window": True},
         {"model": "auth.User"},
     ],
     "show_sidebar": True,
