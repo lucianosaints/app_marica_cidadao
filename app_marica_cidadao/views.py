@@ -12,6 +12,9 @@ from .serializers import (
     UserRegistrationSerializer, 
     CategoriaProblemaSerializer
 )
+from .ai_service import analisar_imagem_problema
+import tempfile
+
 
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -112,3 +115,56 @@ def frontend_view(request):
         return HttpResponse(content, content_type='text/html')
     except FileNotFoundError:
         return HttpResponse("Frontend index.html não encontrado.", status=404)
+
+from rest_framework.views import APIView
+class APIAnalisarFoto(APIView):
+    """
+    Recebe uma foto e retorna o palpite da IA sobre a categoria.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [authentication.TokenAuthentication]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        foto = request.FILES.get('foto_problema')
+        if not foto:
+            return Response({"error": "Nenhuma foto enviada."}, status=400)
+
+        # Salva temporariamente para processar
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg", mode='wb') as tmp:
+            for chunk in foto.chunks():
+                tmp.write(chunk)
+            temp_path = tmp.name
+
+        try:
+            resultado = analisar_imagem_problema(temp_path)
+            # Remove o arquivo temporário
+            os.remove(temp_path)
+            return Response(resultado)
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return Response({"error": str(e)}, status=500)
+
+from django.db.models import Count
+from django.views.generic import TemplateView
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
+
+@method_decorator(staff_member_required, name='dispatch')
+class DashboardAdminView(TemplateView):
+    template_name = 'admin/dashboard_stats.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Estatísticas de Status
+        status_stats = RelatoZeladoria.objects.values('status_atual').annotate(total=Count('id'))
+        # Estatísticas de Categoria
+        categoria_stats = RelatoZeladoria.objects.values('categoria__nome').annotate(total=Count('id'))
+        
+        context['status_stats_json'] = list(status_stats)
+        context['categoria_stats_json'] = list(categoria_stats)
+        context['total_relatos'] = RelatoZeladoria.objects.count()
+        context['resolvidos'] = RelatoZeladoria.objects.filter(status_atual='resolvido').count()
+        
+        return context

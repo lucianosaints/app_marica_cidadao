@@ -83,7 +83,7 @@ class RelatoZeladoriaSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'categoria', 'categoria_nome', 'descricao', 'foto_problema',
             'endereco_aproximado', 'status_atual', 'status_display', 'criado_em',
-            'historico', 'latitude', 'longitude'
+            'historico', 'latitude', 'longitude', 'avaliacao', 'comentario_cidadao'
         ]
         # O cidadão não pode alterar o status ou a data de criação manualmente
         read_only_fields = ['status_atual', 'criado_em']

@@ -203,6 +203,8 @@
       const [enderecoAproximado, setEnderecoAproximado] = useState('');
       const [statusEnvio, setStatusEnvio] = useState('');
       const [isCapturandoGps, setIsCapturandoGps] = useState(false);
+      const [isAnalisandoIa, setIsAnalisandoIa] = useState(false);
+      const [sugestaoIa, setSugestaoIa] = useState(null);
       const [localizacaoConfirmada, setLocalizacaoConfirmada] = useState(false);
       const [listaCategorias, setListaCategorias] = useState([]);
 
@@ -281,719 +283,796 @@
             },
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
           );
-        } else {
-          setStatusEnvio('⚠️ Geolocalização não suportada.');
-          setIsCapturandoGps(false);
-        }
-      };
+          const analisarFotoComIA = async (arquivo) => {
+            setIsAnalisandoIa(true);
+            setStatusEnvio('🤖 IA Analisando imagem...');
 
-      const handleSubmit = async (e) => {
-        e.preventDefault();
+            const formData = new FormData();
+            formData.append('foto_problema', arquivo);
 
-        if (!localizacao.lat || !foto) {
-          setStatusEnvio('Por favor, tire uma foto e capture a localização via GPS.');
-          return;
-        }
+            try {
+              const resposta = await fetch('/api/analisar-foto/', {
+                method: 'POST',
+                headers: { 'Authorization': `Token ${token}` },
+                body: formData
+              });
 
-        setStatusEnvio('Enviando relato para a prefeitura...');
+              if (resposta.ok) {
+                const data = await resposta.json();
+                if (data.categoria_id) {
+                  setCategoria(data.categoria_id.toString());
+                  setSugestaoIa(data);
+                  setStatusEnvio(`🤖 IA: Identificamos um "${data.justificativa}". Categoria ajustada!`);
+                } else {
+                  setStatusEnvio('🤖 IA: Não consegui identificar a categoria automaticamente. Por favor, selecione manualmente.');
+                }
+              }
+            } catch (err) {
+              console.error("Erro na análise de IA:", err);
+              setStatusEnvio('⚠️ Falha ao conectar com o serviço de IA.');
+            } finally {
+              setIsAnalisandoIa(false);
+            }
+          };
 
-        const formData = new FormData();
-        formData.append('descricao', descricao);
-        formData.append('categoria', categoria);
-        formData.append('endereco_aproximado', enderecoAproximado);
-        formData.append('latitude', parseFloat(localizacao.lat));
-        formData.append('longitude', parseFloat(localizacao.lng));
-        formData.append('foto_problema', foto);
+          const handleSubmit = async (e) => {
+            e.preventDefault();
 
-        try {
-          const resposta = await fetch('/api/relatos/', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Token ${token}`
-            },
-            body: formData,
-          });
+            if (!localizacao.lat || !foto) {
+              setStatusEnvio('Por favor, tire uma foto e capture a localização via GPS.');
+              return;
+            }
 
-          if (resposta.ok) {
-            setStatusEnvio('✅ Sucesso! O problema foi relatado à prefeitura.');
-            setDescricao('');
-            setEnderecoAproximado('');
-            setFoto(null);
-            setPreviewUrl(null);
-            setCategoria('');
-            if (onSuccess) onSuccess();
-          } else {
-            const erroData = await resposta.json();
-            console.error("Erro da API:", erroData);
-            // Tenta pegar a primeira mensagem de erro se disponível
-            const msgErro = Object.values(erroData)[0];
-            setStatusEnvio(`❌ Erro: ${Array.isArray(msgErro) ? msgErro[0] : 'Verifique se todos os campos estão preenchidos.'}`);
-          }
-        } catch (erro) {
-          console.error("Erro na requisição:", erro);
-          setStatusEnvio(`❌ Erro de conexão: ${erro.message}. A API está rodando?`);
-        }
-      };
+            setStatusEnvio('Enviando relato para a prefeitura...');
 
-      return (
-        <div style={{ width: '95%', maxWidth: '450px', margin: '0 auto', paddingBottom: '20px' }}>
-          {/* Header com Logos e Voltar */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.95)',
-            padding: '8px 12px',
-            borderRadius: '0 0 15px 15px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            marginBottom: '20px',
-            backdropFilter: 'blur(5px)',
-            width: '100%',
-            boxSizing: 'border-box',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button onClick={onBack} style={{ width: 'auto', backgroundColor: '#95a5a6', padding: '4px 8px', fontSize: '12px' }}>←</button>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '22px' }} />
-                <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '22px' }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontWeight: '600', color: '#2c3e50', fontSize: '12px' }}>Olá, <strong>{username || 'Cidadão'}</strong></span>
-              <button type="button" onClick={onLogout} style={{ width: 'auto', backgroundColor: '#e74c3c', padding: '5px 10px', fontSize: '11px', borderRadius: '15px' }}>Sair</button>
-            </div>
-          </div>
+            const formData = new FormData();
+            formData.append('descricao', descricao);
+            formData.append('categoria', categoria);
+            formData.append('endereco_aproximado', enderecoAproximado);
+            formData.append('latitude', parseFloat(localizacao.lat));
+            formData.append('longitude', parseFloat(localizacao.lng));
+            formData.append('foto_problema', foto);
 
-          <div className="formulario-container" style={{ width: '100%', maxWidth: '100%', padding: '25px 20px', margin: '0 auto' }}>
-            <h1 style={{ color: '#2c3e50', margin: '0 0 10px 0', fontSize: '20px', textAlign: 'center' }}>Novo Relato de Zeladoria</h1>
-            <p style={{ color: '#7f8c8d', marginBottom: '25px', textAlign: 'center', fontSize: '14px' }}>Preencha os dados abaixo para informar um problema à prefeitura.</p>
+            try {
+              const resposta = await fetch('/api/relatos/', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Token ${token}`
+                },
+                body: formData,
+              });
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-              <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🏢 O que você quer reportar?</label>
-                <select
-                  value={categoria}
-                  onChange={(e) => setCategoria(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '16px', backgroundColor: 'white' }}
-                >
-                  <option value="">Selecione uma categoria...</option>
-                  {listaCategorias.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
-                  ))}
-                </select>
-              </div>
+              if (resposta.ok) {
+                setStatusEnvio('✅ Sucesso! O problema foi relatado à prefeitura.');
+                setDescricao('');
+                setEnderecoAproximado('');
+                setFoto(null);
+                setPreviewUrl(null);
+                setCategoria('');
+                if (onSuccess) onSuccess();
+              } else {
+                const erroData = await resposta.json();
+                console.error("Erro da API:", erroData);
+                // Tenta pegar a primeira mensagem de erro se disponível
+                const msgErro = Object.values(erroData)[0];
+                setStatusEnvio(`❌ Erro: ${Array.isArray(msgErro) ? msgErro[0] : 'Verifique se todos os campos estão preenchidos.'}`);
+              }
+            } catch (erro) {
+              console.error("Erro na requisição:", erro);
+              setStatusEnvio(`❌ Erro de conexão: ${erro.message}. A API está rodando?`);
+            }
+          };
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📝 Descreva o problema:</label>
-                <textarea
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  placeholder="Seja o mais específico possível para ajudar a equipe técnica..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', minHeight: '100px', outline: 'none', transition: 'box-shadow 0.3s' }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📍 Onde é o problema?</label>
-                <textarea
-                  value={enderecoAproximado}
-                  onChange={(e) => setEnderecoAproximado(e.target.value)}
-                  placeholder="Avenida principal, em frente à loja tal..."
-                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', minHeight: '60px', outline: 'none', transition: 'box-shadow 0.3s' }}
-                  required
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
-                <div style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📸 Foto do Local:</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      setFoto(file);
-                      if (file) {
-                        const url = URL.createObjectURL(file);
-                        setPreviewUrl(url);
-                      }
-                    }}
-                    style={{ fontSize: '12px', marginBottom: '10px', width: '100%' }}
-                    required
-                  />
-                  {previewUrl && <img src={previewUrl} className="preview-foto" alt="Preview" />}
+          return (
+            <div style={{ width: '95%', maxWidth: '450px', margin: '0 auto', paddingBottom: '20px' }}>
+              {/* Header com Logos e Voltar */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                padding: '8px 12px',
+                borderRadius: '0 0 15px 15px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                marginBottom: '20px',
+                backdropFilter: 'blur(5px)',
+                width: '100%',
+                boxSizing: 'border-box',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button onClick={onBack} style={{ width: 'auto', backgroundColor: '#95a5a6', padding: '4px 8px', fontSize: '12px' }}>←</button>
+                  <div style={{ display: 'flex', gap: '5px' }}>
+                    <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '22px' }} />
+                    <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '22px' }} />
+                  </div>
                 </div>
-                <div style={{ textAlign: 'center', backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🛰️ Localização GPS:</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontWeight: '600', color: '#2c3e50', fontSize: '12px' }}>Olá, <strong>{username || 'Cidadão'}</strong></span>
+                  <button type="button" onClick={onLogout} style={{ width: 'auto', backgroundColor: '#e74c3c', padding: '5px 10px', fontSize: '11px', borderRadius: '15px' }}>Sair</button>
+                </div>
+              </div>
+
+              <div className="formulario-container" style={{ width: '100%', maxWidth: '100%', padding: '25px 20px', margin: '0 auto' }}>
+                <h1 style={{ color: '#2c3e50', margin: '0 0 10px 0', fontSize: '20px', textAlign: 'center' }}>Novo Relato de Zeladoria</h1>
+                <p style={{ color: '#7f8c8d', marginBottom: '25px', textAlign: 'center', fontSize: '14px' }}>Preencha os dados abaixo para informar um problema à prefeitura.</p>
+
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                  <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🏢 O que você quer reportar?</label>
+                    <select
+                      value={categoria}
+                      onChange={(e) => setCategoria(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '16px', backgroundColor: 'white' }}
+                    >
+                      <option value="">Selecione uma categoria...</option>
+                      {listaCategorias.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📝 Descreva o problema:</label>
+                    <textarea
+                      value={descricao}
+                      onChange={(e) => setDescricao(e.target.value)}
+                      placeholder="Seja o mais específico possível para ajudar a equipe técnica..."
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', minHeight: '100px', outline: 'none', transition: 'box-shadow 0.3s' }}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📍 Onde é o problema?</label>
+                    <textarea
+                      value={enderecoAproximado}
+                      onChange={(e) => setEnderecoAproximado(e.target.value)}
+                      placeholder="Avenida principal, em frente à loja tal..."
+                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', minHeight: '60px', outline: 'none', transition: 'box-shadow 0.3s' }}
+                      required
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+                    <div style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📸 Foto do Local:</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          setFoto(file);
+                          if (file) {
+                            const url = URL.createObjectURL(file);
+                            setPreviewUrl(url);
+                            analisarFotoComIA(file);
+                          }
+                        }}
+                        style={{ fontSize: '12px', marginBottom: '10px', width: '100%' }}
+                        required
+                      />
+                      {isAnalisandoIa && <div style={{ fontSize: '11px', color: '#3498db', fontWeight: 'bold', textAlign: 'center', marginBottom: '10px' }}>⚡ IA Processando imagem...</div>}
+                      {previewUrl && <img src={previewUrl} className="preview-foto" alt="Preview" />}
+                      {sugestaoIa && (
+                        <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#ebf8ff', borderRadius: '6px', border: '1px solid #90cdf4', fontSize: '11px' }}>
+                          <strong>🤖 Sugestão da IA:</strong> {sugestaoIa.justificativa} ({sugestaoIa.confianca}% de confiança)
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'center', backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🛰️ Localização GPS:</label>
+                      <button
+                        type="button"
+                        onClick={capturarLocalizacao}
+                        className={isCapturandoGps ? 'gps-animating' : ''}
+                        style={{ width: '100%', backgroundColor: '#2ecc71', fontSize: '14px', padding: '15px', borderRadius: '8px', transition: 'all 0.3s' }}
+                        disabled={isCapturandoGps}
+                      >
+                        {isCapturandoGps ? '⌛ Sincronizando...' : '📍 Capturar Meu Local'}
+                      </button>
+
+                      <div id="map"></div>
+                      <p style={{ fontSize: '10px', color: '#7f8c8d', margin: '5px 0' }}>
+                        Ajuste o alfinete azul no mapa para o local exato.
+                      </p>
+
+                      {localizacaoConfirmada && !isCapturandoGps && <p style={{ margin: '0', fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>
+                        ✅ Localização Fixada!
+                      </p>}
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop: '2px solid #f7fafc', paddingTop: '20px', marginTop: '10px' }}>
+                    <button
+                      type="submit"
+                      style={{
+                        fontSize: '18px',
+                        padding: '18px',
+                        fontWeight: 'bold',
+                        backgroundColor: '#0097e6',
+                        boxShadow: '0 4px 15px rgba(0, 151, 230, 0.4)',
+                        borderRadius: '10px'
+                      }}
+                    >
+                      🚀 Enviar Relato à Prefeitura
+                    </button>
+                    {statusEnvio && <div style={{
+                      textAlign: 'center',
+                      marginTop: '15px',
+                      padding: '10px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      backgroundColor: statusEnvio.includes('Erro') || statusEnvio.includes('❌') ? '#fff5f5' : '#f0fff4',
+                      color: statusEnvio.includes('Erro') || statusEnvio.includes('❌') ? '#c53030' : '#2f855a',
+                      border: `1px solid ${statusEnvio.includes('Erro') || statusEnvio.includes('❌') ? '#feb2b2' : '#9ae6b4'}`
+                    }}>
+                      {statusEnvio}
+                    </div>}
+                  </div>
+                </form>
+              </div>
+            </div>
+          );
+        };
+
+        const Cadastro = ({ onCadastroSuccess, onBackToLogin }) => {
+          const [username, setUsername] = useState('');
+          const [email, setEmail] = useState('');
+          const [password, setPassword] = useState('');
+          const [firstName, setFirstName] = useState('');
+          const [lastName, setLastName] = useState('');
+          const [cpf, setCpf] = useState('');
+          const [telefone, setTelefone] = useState('');
+          const [dataNascimento, setDataNascimento] = useState('');
+          const [cep, setCep] = useState('');
+          const [logradouro, setLogradouro] = useState('');
+          const [numero, setNumero] = useState('');
+          const [bairro, setBairro] = useState('');
+          const [cidade, setCidade] = useState('Maricá');
+          const [comprovante, setComprovante] = useState(null);
+
+          const [status, setStatus] = useState('');
+          const [isLoading, setIsLoading] = useState(false);
+
+          const handleCadastro = async (e) => {
+            e.preventDefault();
+            setIsLoading(true);
+            setStatus('Criando sua conta...');
+
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('first_name', firstName);
+            formData.append('last_name', lastName);
+            formData.append('cpf', cpf);
+            formData.append('telefone', telefone);
+            formData.append('data_nascimento', dataNascimento);
+            formData.append('cep', cep);
+            formData.append('logradouro', logradouro);
+            formData.append('numero', numero);
+            formData.append('bairro', bairro);
+            formData.append('cidade', cidade);
+            if (comprovante) {
+              formData.append('comprovante_titularidade', comprovante);
+            }
+
+            try {
+              const resposta = await fetch('/api/cadastro/', {
+                method: 'POST',
+                body: formData
+              });
+
+              if (resposta.ok) {
+                setStatus('✅ Conta criada com sucesso! Redirecionando para o login...');
+                setTimeout(() => {
+                  onCadastroSuccess();
+                }, 2000);
+              } else {
+                const data = await resposta.json();
+                console.error("Erro no cadastro:", data);
+                setStatus(`❌ Erro: ${JSON.stringify(data)}`);
+              }
+            } catch (err) {
+              console.error("Erro de conexão detalhado:", err);
+              setStatus(`❌ Erro de conexão com o servidor. Verifique o terminal do backend. (Erro: ${err.message})`);
+            } finally {
+              setIsLoading(false);
+            }
+          };
+
+          return (
+            <div className="formulario-container">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+                  <img src="logo/Logo-prefeitura.png" alt="Prefeitura" style={{ height: '35px', maxWidth: '140px', objectFit: 'contain' }} />
+                  <img src="logo/Logo-Ictim.png" alt="Ictim" style={{ height: '35px', maxWidth: '140px', objectFit: 'contain' }} />
+                </div>
+                <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '20px', textAlign: 'center' }}>Cadastro de Cidadão</h2>
+                <p style={{ margin: '5px 0 0', color: '#7f8c8d', fontSize: '13px', textAlign: 'center' }}>Crie sua conta completa para acessar os serviços.</p>
+              </div>
+
+              <form onSubmit={handleCadastro} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {/* Dados de Acesso */}
+                <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>🔐 Dados de Acesso</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Usuário (Login)" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                  </div>
+                </div>
+
+                {/* Dados Pessoais */}
+                <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>👤 Dados Pessoais</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
+                    <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nome" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Sobrenome" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                    <input type="text" value={cpf} onChange={e => setCpf(e.target.value)} placeholder="CPF (000.000.000-00)" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
+                      <input type="text" value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="Telefone" disabled={isLoading} style={{ flex: '1 1 180px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                      <input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} title="Data de Nascimento" disabled={isLoading} style={{ flex: '1 1 180px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Endereço */}
+                <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>🏠 Endereço</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+                    <input type="text" value={cep} onChange={e => setCep(e.target.value)} placeholder="CEP" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    <input type="text" value={logradouro} onChange={e => setLogradouro(e.target.value)} placeholder="Rua/Logradouro" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '10px' }}>
+                    <input type="text" value={numero} onChange={e => setNumero(e.target.value)} placeholder="Nº" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                    <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} placeholder="Bairro" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                  </div>
+                  <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade" disabled={isLoading} style={{ width: '100%', marginTop: '10px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
+                </div>
+
+                {/* Comprovante */}
+                <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
+                  <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>📄 Comprovante de Imóvel (Opcional)</h3>
+                  <input type="file" onChange={e => setComprovante(e.target.files[0])} disabled={isLoading} style={{ width: '100%', fontSize: '12px' }} />
+                  <p style={{ margin: '5px 0 0', fontSize: '10px', color: '#95a5a6' }}>Caso a ação seja em local privado.</p>
+                </div>
+
+                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <button type="submit" disabled={isLoading} style={{ padding: '15px', fontSize: '18px', fontWeight: 'bold', backgroundColor: '#2ecc71', color: 'white', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 10px rgba(46, 204, 113, 0.3)' }}>
+                    {isLoading ? '⌛ Cadastrando...' : 'Finalizar Cadastro 🚀'}
+                  </button>
+                  <button type="button" onClick={onBackToLogin} style={{ backgroundColor: 'transparent', color: '#7f8c8d', border: '1px solid #dcdde1', padding: '10px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }} disabled={isLoading}>
+                    Já tenho conta. Voltar ao Login
+                  </button>
+                </div>
+              </form>
+
+              {status && <div className="status-mensagem" style={{ marginTop: '20px', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center', backgroundColor: status.includes('❌') ? '#fff5f5' : '#f0fff4', color: status.includes('❌') ? '#c53030' : '#2f855a', border: `1px solid ${status.includes('❌') ? '#feb2b2' : '#9ae6b4'}` }}>{status}</div>}
+            </div>
+          );
+        };
+
+
+        const Login = ({ onLoginSuccess, onGoToCadastro }) => {
+          const [username, setUsername] = useState('');
+          const [password, setPassword] = useState('');
+          const [erro, setErro] = useState('');
+
+          const handleLogin = async (e) => {
+            e.preventDefault();
+            setErro('Autenticando...');
+
+            try {
+              const resposta = await fetch('/api/login/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+              });
+
+              if (resposta.ok) {
+                const data = await resposta.json();
+                onLoginSuccess(data.token, data.username);
+              } else {
+                setErro('Acesso Negado. Cidadão não encontrado ou senha incorreta.');
+              }
+            } catch (err) {
+              setErro('Erro ao se conectar com o sistema da Prefeitura.');
+            }
+          };
+
+          return (
+            <div className="formulario-container" style={{ padding: '0', overflow: 'hidden' }}>
+              <div style={{
+                backgroundImage: 'url("logo/Montagem_Ilustracao_Prefeitura-d.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                height: '140px',
+                width: '100%'
+              }}></div>
+              <div style={{ padding: '25px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                  <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '40px' }} />
+                  <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '40px' }} />
+                </div>
+                <h2 style={{ marginTop: 0, fontSize: '20px', color: '#2c3e50' }}>Maricá Cidadão</h2>
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div>
+                    <label style={{ fontSize: '14px', marginBottom: '5px' }}>👤 CPF ou Usuário:</label>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      placeholder="Seu CPF ou nome"
+                      required
+                      style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '14px', marginBottom: '5px' }}>🔒 Senha:</label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="Sua senha segura"
+                      required
+                      style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px', outline: 'none' }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '15px',
+                      backgroundColor: '#0097e6',
+                      boxShadow: '0 4px 10px rgba(0, 151, 230, 0.3)',
+                      marginTop: '10px'
+                    }}
+                  >
+                    Login 🚀
+                  </button>
                   <button
                     type="button"
-                    onClick={capturarLocalizacao}
-                    className={isCapturandoGps ? 'gps-animating' : ''}
-                    style={{ width: '100%', backgroundColor: '#2ecc71', fontSize: '14px', padding: '15px', borderRadius: '8px', transition: 'all 0.3s' }}
-                    disabled={isCapturandoGps}
+                    onClick={onGoToCadastro}
+                    style={{
+                      backgroundColor: 'transparent',
+                      color: '#7f8c8d',
+                      border: '1px solid #dcdde1',
+                      padding: '10px',
+                      fontSize: '14px'
+                    }}
                   >
-                    {isCapturandoGps ? '⌛ Sincronizando...' : '📍 Capturar Meu Local'}
+                    Não tem conta? Cadastre-se
                   </button>
+                </form>
+                {erro && <div className="status-mensagem" style={{ backgroundColor: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2', padding: '10px', fontSize: '13px' }}>{erro}</div>}
+              </div>
+            </div>
+          );
+        };
 
-                  <div id="map"></div>
-                  <p style={{ fontSize: '10px', color: '#7f8c8d', margin: '5px 0' }}>
-                    Ajuste o alfinete azul no mapa para o local exato.
-                  </p>
+        const DashboardCidadao = ({ token, username, onLogout, onChangeView }) => {
+          const [relatos, setRelatos] = useState([]);
+          const [carregando, setCarregando] = useState(true);
+          const [erro, setErro] = useState('');
 
-                  {localizacaoConfirmada && !isCapturandoGps && <p style={{ margin: '0', fontSize: '11px', color: '#27ae60', fontWeight: 'bold' }}>
-                    ✅ Localização Fixada!
-                  </p>}
+          React.useEffect(() => {
+            const carregarRelatos = async () => {
+              try {
+                const resposta = await fetch('/api/relatos/', {
+                  headers: { 'Authorization': `Token ${token}` }
+                });
+                if (resposta.ok) {
+                  const data = await resposta.json();
+                  setRelatos(data);
+                } else {
+                  setErro('Erro ao carregar relatos.');
+                }
+              } catch (err) {
+                setErro('Erro de conexão com o servidor.');
+              } finally {
+                setCarregando(false);
+              }
+            };
+            carregarRelatos();
+          }, [token]);
+
+          const getStatusColor = (status) => {
+            const cores = {
+              'recebido': '#f39c12',
+              'em_analise': '#3498db',
+              'equipe_despachada': '#9b59b6',
+              'resolvido': '#2ecc71',
+              'rejeitado': '#e74c3c'
+            };
+            return cores[status] || '#95a5a6';
+          };
+
+          const stats = {
+            total: relatos.length,
+            resolvidos: relatos.filter(r => r.status_atual === 'resolvido').length,
+            em_andamento: relatos.filter(r => r.status_atual !== 'resolvido' && r.status_atual !== 'rejeitado').length
+          };
+
+          return (
+            <div style={{ width: '95%', maxWidth: '450px', margin: '0 auto', paddingBottom: '30px' }}>
+              {/* Header Superior com Logos */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.98)',
+                padding: '10px 15px',
+                borderRadius: '0 0 15px 15px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                marginBottom: '25px',
+                backdropFilter: 'blur(8px)',
+                width: '100%',
+                boxSizing: 'border-box',
+                borderBottom: '2px solid #3498db',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '26px' }} />
+                  <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '26px' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontWeight: '700', color: '#2c3e50', fontSize: '12px' }}>Olá, {username || 'Cidadão'}</span>
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    style={{
+                      width: 'auto',
+                      backgroundColor: '#ee5253',
+                      padding: '5px 12px',
+                      fontSize: '11px',
+                      borderRadius: '15px',
+                      boxShadow: '0 2px 4px rgba(238, 82, 83, 0.3)'
+                    }}
+                  >
+                    Sair
+                  </button>
                 </div>
               </div>
 
-              <div style={{ borderTop: '2px solid #f7fafc', paddingTop: '20px', marginTop: '10px' }}>
+              {/* Banner de Boas-vindas e Ação Principal */}
+              <div style={{
+                backgroundColor: 'white',
+                padding: '30px 20px',
+                borderRadius: '15px',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
+                marginBottom: '30px',
+                textAlign: 'center',
+                backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #f1f2f6 100%)',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <h1 style={{ color: '#2c3e50', margin: '0 0 10px 0', fontSize: '24px', fontWeight: '800' }}>Central de Zeladoria</h1>
+                <p style={{ color: '#7f8c8d', marginBottom: '25px', fontSize: '15px' }}>Transforme Maricá cuidando do seu bairro.</p>
                 <button
-                  type="submit"
+                  onClick={() => onChangeView('novo')}
                   style={{
-                    fontSize: '18px',
+                    width: '100%',
+                    maxWidth: '300px',
                     padding: '18px',
+                    fontSize: '18px',
                     fontWeight: 'bold',
                     backgroundColor: '#0097e6',
-                    boxShadow: '0 4px 15px rgba(0, 151, 230, 0.4)',
-                    borderRadius: '10px'
+                    boxShadow: '0 5px 15px rgba(0, 151, 230, 0.4)',
+                    borderRadius: '12px',
+                    border: 'none',
+                    color: 'white',
+                    cursor: 'pointer'
                   }}
                 >
-                  🚀 Enviar Relato à Prefeitura
+                  🚀 Abrir Novo Chamado
                 </button>
-                {statusEnvio && <div style={{
-                  textAlign: 'center',
-                  marginTop: '15px',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  backgroundColor: statusEnvio.includes('Erro') || statusEnvio.includes('❌') ? '#fff5f5' : '#f0fff4',
-                  color: statusEnvio.includes('Erro') || statusEnvio.includes('❌') ? '#c53030' : '#2f855a',
-                  border: `1px solid ${statusEnvio.includes('Erro') || statusEnvio.includes('❌') ? '#feb2b2' : '#9ae6b4'}`
-                }}>
-                  {statusEnvio}
-                </div>}
               </div>
-            </form>
-          </div>
-        </div>
-      );
-    };
 
-    const Cadastro = ({ onCadastroSuccess, onBackToLogin }) => {
-      const [username, setUsername] = useState('');
-      const [email, setEmail] = useState('');
-      const [password, setPassword] = useState('');
-      const [firstName, setFirstName] = useState('');
-      const [lastName, setLastName] = useState('');
-      const [cpf, setCpf] = useState('');
-      const [telefone, setTelefone] = useState('');
-      const [dataNascimento, setDataNascimento] = useState('');
-      const [cep, setCep] = useState('');
-      const [logradouro, setLogradouro] = useState('');
-      const [numero, setNumero] = useState('');
-      const [bairro, setBairro] = useState('');
-      const [cidade, setCidade] = useState('Maricá');
-      const [comprovante, setComprovante] = useState(null);
-
-      const [status, setStatus] = useState('');
-      const [isLoading, setIsLoading] = useState(false);
-
-      const handleCadastro = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setStatus('Criando sua conta...');
-
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('email', email);
-        formData.append('password', password);
-        formData.append('first_name', firstName);
-        formData.append('last_name', lastName);
-        formData.append('cpf', cpf);
-        formData.append('telefone', telefone);
-        formData.append('data_nascimento', dataNascimento);
-        formData.append('cep', cep);
-        formData.append('logradouro', logradouro);
-        formData.append('numero', numero);
-        formData.append('bairro', bairro);
-        formData.append('cidade', cidade);
-        if (comprovante) {
-          formData.append('comprovante_titularidade', comprovante);
-        }
-
-        try {
-          const resposta = await fetch('/api/cadastro/', {
-            method: 'POST',
-            body: formData
-          });
-
-          if (resposta.ok) {
-            setStatus('✅ Conta criada com sucesso! Redirecionando para o login...');
-            setTimeout(() => {
-              onCadastroSuccess();
-            }, 2000);
-          } else {
-            const data = await resposta.json();
-            console.error("Erro no cadastro:", data);
-            setStatus(`❌ Erro: ${JSON.stringify(data)}`);
-          }
-        } catch (err) {
-          console.error("Erro de conexão detalhado:", err);
-          setStatus(`❌ Erro de conexão com o servidor. Verifique o terminal do backend. (Erro: ${err.message})`);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      return (
-        <div className="formulario-container">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
-              <img src="logo/Logo-prefeitura.png" alt="Prefeitura" style={{ height: '35px', maxWidth: '140px', objectFit: 'contain' }} />
-              <img src="logo/Logo-Ictim.png" alt="Ictim" style={{ height: '35px', maxWidth: '140px', objectFit: 'contain' }} />
-            </div>
-            <h2 style={{ margin: 0, color: '#2c3e50', fontSize: '20px', textAlign: 'center' }}>Cadastro de Cidadão</h2>
-            <p style={{ margin: '5px 0 0', color: '#7f8c8d', fontSize: '13px', textAlign: 'center' }}>Crie sua conta completa para acessar os serviços.</p>
-          </div>
-
-          <form onSubmit={handleCadastro} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            {/* Dados de Acesso */}
-            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>🔐 Dados de Acesso</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <input type="text" value={username} onChange={e => setUsername(e.target.value)} placeholder="Usuário (Login)" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Senha" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-              </div>
-            </div>
-
-            {/* Dados Pessoais */}
-            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>👤 Dados Pessoais</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
-                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nome" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Sobrenome" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-                <input type="text" value={cpf} onChange={e => setCpf(e.target.value)} placeholder="CPF (000.000.000-00)" required disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '10px' }}>
-                  <input type="text" value={telefone} onChange={e => setTelefone(e.target.value)} placeholder="Telefone" disabled={isLoading} style={{ flex: '1 1 180px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                  <input type="date" value={dataNascimento} onChange={e => setDataNascimento(e.target.value)} title="Data de Nascimento" disabled={isLoading} style={{ flex: '1 1 180px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* Endereço */}
-            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>🏠 Endereço</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
-                <input type="text" value={cep} onChange={e => setCep(e.target.value)} placeholder="CEP" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                <input type="text" value={logradouro} onChange={e => setLogradouro(e.target.value)} placeholder="Rua/Logradouro" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginTop: '10px' }}>
-                <input type="text" value={numero} onChange={e => setNumero(e.target.value)} placeholder="Nº" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-                <input type="text" value={bairro} onChange={e => setBairro(e.target.value)} placeholder="Bairro" disabled={isLoading} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-              </div>
-              <input type="text" value={cidade} onChange={e => setCidade(e.target.value)} placeholder="Cidade" disabled={isLoading} style={{ width: '100%', marginTop: '10px', padding: '10px', borderRadius: '6px', border: '1px solid #dcdde1' }} />
-            </div>
-
-            {/* Comprovante */}
-            <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px solid #e9ecef' }}>
-              <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#3498db' }}>📄 Comprovante de Imóvel (Opcional)</h3>
-              <input type="file" onChange={e => setComprovante(e.target.files[0])} disabled={isLoading} style={{ width: '100%', fontSize: '12px' }} />
-              <p style={{ margin: '5px 0 0', fontSize: '10px', color: '#95a5a6' }}>Caso a ação seja em local privado.</p>
-            </div>
-
-            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button type="submit" disabled={isLoading} style={{ padding: '15px', fontSize: '18px', fontWeight: 'bold', backgroundColor: '#2ecc71', color: 'white', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 10px rgba(46, 204, 113, 0.3)' }}>
-                {isLoading ? '⌛ Cadastrando...' : 'Finalizar Cadastro 🚀'}
-              </button>
-              <button type="button" onClick={onBackToLogin} style={{ backgroundColor: 'transparent', color: '#7f8c8d', border: '1px solid #dcdde1', padding: '10px', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }} disabled={isLoading}>
-                Já tenho conta. Voltar ao Login
-              </button>
-            </div>
-          </form>
-
-          {status && <div className="status-mensagem" style={{ marginTop: '20px', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', textAlign: 'center', backgroundColor: status.includes('❌') ? '#fff5f5' : '#f0fff4', color: status.includes('❌') ? '#c53030' : '#2f855a', border: `1px solid ${status.includes('❌') ? '#feb2b2' : '#9ae6b4'}` }}>{status}</div>}
-        </div>
-      );
-    };
-
-
-    const Login = ({ onLoginSuccess, onGoToCadastro }) => {
-      const [username, setUsername] = useState('');
-      const [password, setPassword] = useState('');
-      const [erro, setErro] = useState('');
-
-      const handleLogin = async (e) => {
-        e.preventDefault();
-        setErro('Autenticando...');
-
-        try {
-          const resposta = await fetch('/api/login/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username, password })
-          });
-
-          if (resposta.ok) {
-            const data = await resposta.json();
-            onLoginSuccess(data.token, data.username);
-          } else {
-            setErro('Acesso Negado. Cidadão não encontrado ou senha incorreta.');
-          }
-        } catch (err) {
-          setErro('Erro ao se conectar com o sistema da Prefeitura.');
-        }
-      };
-
-      return (
-        <div className="formulario-container" style={{ padding: '0', overflow: 'hidden' }}>
-          <div style={{
-            backgroundImage: 'url("logo/Montagem_Ilustracao_Prefeitura-d.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            height: '140px',
-            width: '100%'
-          }}></div>
-          <div style={{ padding: '25px' }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '40px' }} />
-              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '40px' }} />
-            </div>
-            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#2c3e50' }}>Maricá Cidadão</h2>
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ fontSize: '14px', marginBottom: '5px' }}>👤 CPF ou Usuário:</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Seu CPF ou nome"
-                  required
-                  style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px', outline: 'none' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '14px', marginBottom: '5px' }}>🔒 Senha:</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Sua senha segura"
-                  required
-                  style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px', outline: 'none' }}
-                />
-              </div>
-              <button
-                type="submit"
-                style={{
-                  padding: '15px',
-                  backgroundColor: '#0097e6',
-                  boxShadow: '0 4px 10px rgba(0, 151, 230, 0.3)',
-                  marginTop: '10px'
-                }}
-              >
-                Login 🚀
-              </button>
-              <button
-                type="button"
-                onClick={onGoToCadastro}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#7f8c8d',
-                  border: '1px solid #dcdde1',
-                  padding: '10px',
-                  fontSize: '14px'
-                }}
-              >
-                Não tem conta? Cadastre-se
-              </button>
-            </form>
-            {erro && <div className="status-mensagem" style={{ backgroundColor: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2', padding: '10px', fontSize: '13px' }}>{erro}</div>}
-          </div>
-        </div>
-      );
-    };
-
-    const DashboardCidadao = ({ token, username, onLogout, onChangeView }) => {
-      const [relatos, setRelatos] = useState([]);
-      const [carregando, setCarregando] = useState(true);
-      const [erro, setErro] = useState('');
-
-      React.useEffect(() => {
-        const carregarRelatos = async () => {
-          try {
-            const resposta = await fetch('/api/relatos/', {
-              headers: { 'Authorization': `Token ${token}` }
-            });
-            if (resposta.ok) {
-              const data = await resposta.json();
-              setRelatos(data);
-            } else {
-              setErro('Erro ao carregar relatos.');
-            }
-          } catch (err) {
-            setErro('Erro de conexão com o servidor.');
-          } finally {
-            setCarregando(false);
-          }
-        };
-        carregarRelatos();
-      }, [token]);
-
-      const getStatusColor = (status) => {
-        const cores = {
-          'recebido': '#f39c12',
-          'em_analise': '#3498db',
-          'equipe_despachada': '#9b59b6',
-          'resolvido': '#2ecc71',
-          'rejeitado': '#e74c3c'
-        };
-        return cores[status] || '#95a5a6';
-      };
-
-      const stats = {
-        total: relatos.length,
-        resolvidos: relatos.filter(r => r.status_atual === 'resolvido').length,
-        em_andamento: relatos.filter(r => r.status_atual !== 'resolvido' && r.status_atual !== 'rejeitado').length
-      };
-
-      return (
-        <div style={{ width: '95%', maxWidth: '450px', margin: '0 auto', paddingBottom: '30px' }}>
-          {/* Header Superior com Logos */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.98)',
-            padding: '10px 15px',
-            borderRadius: '0 0 15px 15px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            marginBottom: '25px',
-            backdropFilter: 'blur(8px)',
-            width: '100%',
-            boxSizing: 'border-box',
-            borderBottom: '2px solid #3498db',
-            flexWrap: 'wrap',
-            gap: '8px'
-          }}>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '26px' }} />
-              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '26px' }} />
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontWeight: '700', color: '#2c3e50', fontSize: '12px' }}>Olá, {username || 'Cidadão'}</span>
-              <button
-                type="button"
-                onClick={onLogout}
-                style={{
-                  width: 'auto',
-                  backgroundColor: '#ee5253',
-                  padding: '5px 12px',
-                  fontSize: '11px',
-                  borderRadius: '15px',
-                  boxShadow: '0 2px 4px rgba(238, 82, 83, 0.3)'
-                }}
-              >
-                Sair
-              </button>
-            </div>
-          </div>
-
-          {/* Banner de Boas-vindas e Ação Principal */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px 20px',
-            borderRadius: '15px',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
-            marginBottom: '30px',
-            textAlign: 'center',
-            backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #f1f2f6 100%)',
-            width: '100%',
-            boxSizing: 'border-box'
-          }}>
-            <h1 style={{ color: '#2c3e50', margin: '0 0 10px 0', fontSize: '24px', fontWeight: '800' }}>Central de Zeladoria</h1>
-            <p style={{ color: '#7f8c8d', marginBottom: '25px', fontSize: '15px' }}>Transforme Maricá cuidando do seu bairro.</p>
-            <button
-              onClick={() => onChangeView('novo')}
-              style={{
-                width: '100%',
-                maxWidth: '300px',
-                padding: '18px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                backgroundColor: '#0097e6',
-                boxShadow: '0 5px 15px rgba(0, 151, 230, 0.4)',
-                borderRadius: '12px',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              🚀 Abrir Novo Chamado
-            </button>
-          </div>
-
-          {/* Grid de Estatísticas - Responsivo */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-            gap: '15px',
-            marginBottom: '30px',
-            padding: '0 5px'
-          }}>
-            <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #3498db' }}>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#3498db', marginBottom: '4px' }}>{stats.total}</div>
-              <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Total</div>
-            </div>
-            <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #f39c12' }}>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#f39c12', marginBottom: '4px' }}>{stats.em_andamento}</div>
-              <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Abertos</div>
-            </div>
-            <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #2ecc71' }}>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#2ecc71', marginBottom: '4px' }}>{stats.resolvidos}</div>
-              <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Resolvidos</div>
-            </div>
-          </div>
-
-          {/* Listagem de Protocolos */}
-          <div style={{ marginBottom: '20px', padding: '0 5px' }}>
-            <h2 style={{ color: 'white', margin: 0, textShadow: '1px 2px 4px rgba(0,0,0,0.2)', fontSize: '22px', fontWeight: '700' }}>Meus Protocolos Ativos</h2>
-          </div>
-
-          {carregando && <div style={{ backgroundColor: 'white', padding: '50px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-            <p style={{ fontSize: '18px', color: '#7f8c8d' }}>Sincronizando com a prefeitura... ⏳</p>
-          </div>}
-
-          {erro && <div className="status-mensagem" style={{ backgroundColor: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2' }}>{erro}</div>}
-
-          {!carregando && relatos.length === 0 && !erro && (
-            <div style={{ backgroundColor: 'white', padding: '50px 30px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.05)', border: '1px solid #f1f2f6' }}>
-              <div style={{ fontSize: '60px', marginBottom: '20px', filter: 'grayscale(0.5)' }}>📋</div>
-              <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '700' }}>Nenhum relato encontrado</h3>
-              <p style={{ color: '#95a5a6', fontSize: '15px', maxWidth: '300px', margin: '0 auto' }}>Você ainda não abriu nenhum chamado para a prefeitura. Comece agora ajudando sua cidade!</p>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {relatos.map(relato => (
-              <div key={relato.id} style={{
-                backgroundColor: 'white',
-                padding: '25px',
-                borderRadius: '15px',
-                boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-                transition: 'transform 0.2s',
-                cursor: 'pointer'
+              {/* Grid de Estatísticas - Responsivo */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+                gap: '15px',
+                marginBottom: '30px',
+                padding: '0 5px'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px', marginBottom: '15px' }}>
-                  <div>
-                    <span style={{
-                      display: 'inline-block',
-                      backgroundColor: '#f1f2f6',
-                      color: '#57606f',
-                      padding: '3px 10px',
-                      borderRadius: '5px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      marginBottom: '8px'
-                    }}>
-                      #{relato.id}
-                    </span>
-                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>{relato.categoria_nome}</h3>
-                    <div style={{ marginTop: '5px', color: '#95a5a6', fontSize: '13px' }}>
-                      📅 Aberto em {new Date(relato.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      backgroundColor: getStatusColor(relato.status_atual),
-                      color: 'white',
-                      padding: '6px 15px',
-                      borderRadius: '20px',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                    }}>
-                      {relato.status_display || relato.status_atual.toUpperCase()}
-                    </div>
-                  </div>
+                <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #3498db' }}>
+                  <div style={{ fontSize: '28px', fontWeight: '800', color: '#3498db', marginBottom: '4px' }}>{stats.total}</div>
+                  <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Total</div>
                 </div>
-
-                <div style={{ color: '#2f3542', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
-                  {relato.descricao}
+                <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #f39c12' }}>
+                  <div style={{ fontSize: '28px', fontWeight: '800', color: '#f39c12', marginBottom: '4px' }}>{stats.em_andamento}</div>
+                  <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Abertos</div>
                 </div>
-
-                {relato.historico && relato.historico.length > 0 ? (
-                  <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px dashed #dcdde1' }}>
-                    <h4 style={{ margin: '0 0 12px 0', color: '#747d8c', fontSize: '13px', fontWeight: 'bold' }}>📍 ÚLTIMA ATUALIZAÇÃO DA PREFEITURA</h4>
-                    <div style={{ position: 'relative', paddingLeft: '15px' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: '#3498db', borderRadius: '10px' }}></div>
-                      <div style={{ fontSize: '14px', color: '#2c3e50' }}>
-                        {relato.historico[0].observacao_prefeitura}
-                      </div>
-                      <small style={{ display: 'block', marginTop: '5px', color: '#a4b0be' }}>
-                        Atualizado em {new Date(relato.historico[0].data_atualizacao).toLocaleDateString()}
-                      </small>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: '#a4b0be', fontSize: '13px', fontStyle: 'italic' }}>
-                    Aguardando análise da secretaria competente.
-                  </div>
-                )}
+                <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #2ecc71' }}>
+                  <div style={{ fontSize: '28px', fontWeight: '800', color: '#2ecc71', marginBottom: '4px' }}>{stats.resolvidos}</div>
+                  <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Resolvidos</div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-      );
-    };
 
-    const AppWrapper = () => {
-      const [token, setToken] = useState(localStorage.getItem('marica_token') || null);
-      const [username, setUsername] = useState(localStorage.getItem('marica_username') || '');
-      const [view, setView] = useState('lista'); // 'lista' ou 'novo'
-      const [isRegistering, setIsRegistering] = useState(false);
+              {/* Listagem de Protocolos */}
+              <div style={{ marginBottom: '20px', padding: '0 5px' }}>
+                <h2 style={{ color: 'white', margin: 0, textShadow: '1px 2px 4px rgba(0,0,0,0.2)', fontSize: '22px', fontWeight: '700' }}>Meus Protocolos Ativos</h2>
+              </div>
 
-      const handleLogin = (newToken, newUsername) => {
-        localStorage.setItem('marica_token', newToken);
-        localStorage.setItem('marica_username', newUsername);
-        setToken(newToken);
-        setUsername(newUsername);
-        setView('lista');
-      };
+              {carregando && <div style={{ backgroundColor: 'white', padding: '50px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                <p style={{ fontSize: '18px', color: '#7f8c8d' }}>Sincronizando com a prefeitura... ⏳</p>
+              </div>}
 
-      const handleLogout = () => {
-        localStorage.removeItem('marica_token');
-        localStorage.removeItem('marica_username');
-        setToken(null);
-        setUsername('');
-        setIsRegistering(false);
-      };
+              {erro && <div className="status-mensagem" style={{ backgroundColor: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2' }}>{erro}</div>}
 
-      if (!token) {
-        if (isRegistering) {
-          return <Cadastro onCadastroSuccess={() => setIsRegistering(false)} onBackToLogin={() => setIsRegistering(false)} />
-        }
-        return <Login onLoginSuccess={handleLogin} onGoToCadastro={() => setIsRegistering(true)} />
-      }
+              {!carregando && relatos.length === 0 && !erro && (
+                <div style={{ backgroundColor: 'white', padding: '50px 30px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.05)', border: '1px solid #f1f2f6' }}>
+                  <div style={{ fontSize: '60px', marginBottom: '20px', filter: 'grayscale(0.5)' }}>📋</div>
+                  <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '700' }}>Nenhum relato encontrado</h3>
+                  <p style={{ color: '#95a5a6', fontSize: '15px', maxWidth: '300px', margin: '0 auto' }}>Você ainda não abriu nenhum chamado para a prefeitura. Comece agora ajudando sua cidade!</p>
+                </div>
+              )}
 
-      if (view === 'novo') {
-        return <FormularioZeladoria token={token} username={username} onLogout={handleLogout} onSuccess={() => setView('lista')} onBack={() => setView('lista')} />;
-      }
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {relatos.map(relato => (
+                  <div key={relato.id} style={{
+                    backgroundColor: 'white',
+                    padding: '25px',
+                    borderRadius: '15px',
+                    boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+                    transition: 'transform 0.2s',
+                    cursor: 'pointer'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px', marginBottom: '15px' }}>
+                      <div>
+                        <span style={{
+                          display: 'inline-block',
+                          backgroundColor: '#f1f2f6',
+                          color: '#57606f',
+                          padding: '3px 10px',
+                          borderRadius: '5px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          marginBottom: '8px'
+                        }}>
+                          #{relato.id}
+                        </span>
+                        <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>{relato.categoria_nome}</h3>
+                        <div style={{ marginTop: '5px', color: '#95a5a6', fontSize: '13px' }}>
+                          📅 Aberto em {new Date(relato.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{
+                          backgroundColor: getStatusColor(relato.status_atual),
+                          color: 'white',
+                          padding: '6px 15px',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                          boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                        }}>
+                          {relato.status_display || relato.status_atual.toUpperCase()}
+                        </div>
+                      </div>
+                    </div>
 
-      return <DashboardCidadao token={token} username={username} onLogout={handleLogout} onChangeView={setView} />
-    };
+                    <div style={{ color: '#2f3542', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
+                      {relato.descricao}
+                    </div>
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<AppWrapper />);
+                    {relato.status_atual === 'resolvido' && !relato.avaliacao && (
+                      <div style={{ backgroundColor: '#fff9db', padding: '15px', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffe066' }}>
+                        <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#856404' }}>⭐ Como foi o atendimento?</h4>
+                        <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                          {[1, 2, 3, 4, 5].map(estrela => (
+                            <span
+                              key={estrela}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const comentario = prompt('Deixe um breve comentário (opcional):');
+                                (async () => {
+                                  try {
+                                    await fetch(`/api/relatos/${relato.id}/`, {
+                                      method: 'PATCH',
+                                      headers: {
+                                        'Authorization': `Token ${token}`,
+                                        'Content-Type': 'application/json'
+                                      },
+                                      body: JSON.stringify({ avaliacao: estrela, comentario_cidadao: comentario })
+                                    });
+                                    alert('Obrigado pelo seu feedback! ⭐');
+                                    window.location.reload();
+                                  } catch (err) {
+                                    alert('Erro ao enviar avaliação.');
+                                  }
+                                })();
+                              }}
+                              style={{ fontSize: '24px', cursor: 'pointer', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.1))' }}
+                            >
+                              ⭐
+                            </span>
+                          ))}
+                        </div>
+                        <p style={{ margin: 0, fontSize: '11px', color: '#856404' }}>Sua avaliação ajuda a melhorar Maricá.</p>
+                      </div>
+                    )}
+
+                    {relato.avaliacao && (
+                      <div style={{ marginBottom: '15px', fontSize: '13px', color: '#2ecc71', fontWeight: 'bold' }}>
+                        Sua avaliação: {'⭐'.repeat(relato.avaliacao)}
+                      </div>
+                    )}
+
+                    {relato.historico && relato.historico.length > 0 ? (
+                      <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px dashed #dcdde1' }}>
+                        <h4 style={{ margin: '0 0 12px 0', color: '#747d8c', fontSize: '13px', fontWeight: 'bold' }}>📍 ÚLTIMA ATUALIZAÇÃO DA PREFEITURA</h4>
+                        <div style={{ position: 'relative', paddingLeft: '15px' }}>
+                          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: '#3498db', borderRadius: '10px' }}></div>
+                          <div style={{ fontSize: '14px', color: '#2c3e50' }}>
+                            {relato.historico[0].observacao_prefeitura}
+                          </div>
+                          <small style={{ display: 'block', marginTop: '5px', color: '#a4b0be' }}>
+                            Atualizado em {new Date(relato.historico[0].data_atualizacao).toLocaleDateString()}
+                          </small>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ color: '#a4b0be', fontSize: '13px', fontStyle: 'italic' }}>
+                        Aguardando análise da secretaria competente.
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        };
+
+        const AppWrapper = () => {
+          const [token, setToken] = useState(localStorage.getItem('marica_token') || null);
+          const [username, setUsername] = useState(localStorage.getItem('marica_username') || '');
+          const [view, setView] = useState('lista'); // 'lista' ou 'novo'
+          const [isRegistering, setIsRegistering] = useState(false);
+
+          const handleLogin = (newToken, newUsername) => {
+            localStorage.setItem('marica_token', newToken);
+            localStorage.setItem('marica_username', newUsername);
+            setToken(newToken);
+            setUsername(newUsername);
+            setView('lista');
+          };
+
+          const handleLogout = () => {
+            localStorage.removeItem('marica_token');
+            localStorage.removeItem('marica_username');
+            setToken(null);
+            setUsername('');
+            setIsRegistering(false);
+          };
+
+          if (!token) {
+            if (isRegistering) {
+              return <Cadastro onCadastroSuccess={() => setIsRegistering(false)} onBackToLogin={() => setIsRegistering(false)} />
+            }
+            return <Login onLoginSuccess={handleLogin} onGoToCadastro={() => setIsRegistering(true)} />
+          }
+
+          if (view === 'novo') {
+            return <FormularioZeladoria token={token} username={username} onLogout={handleLogout} onSuccess={() => setView('lista')} onBack={() => setView('lista')} />;
+          }
+
+          return <DashboardCidadao token={token} username={username} onLogout={handleLogout} onChangeView={setView} />
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AppWrapper />);
   </script>
 </body>
 

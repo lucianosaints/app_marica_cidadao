@@ -1,0 +1,103 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Cards de Resumo -->
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-info">
+                <div class="inner">
+                    <h3>{{ total_relatos }}</h3>
+                    <p>Total de Relatos</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="small-box bg-success">
+                <div class="inner">
+                    <h3>{{ resolvidos }}</h3>
+                    <p>Resolvidos</p>
+                </div>
+                <div class="icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Gráfico de Status -->
+        <div class="col-md-6">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Relatos por Status</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart"
+                        style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Gráfico de Categoria -->
+        <div class="col-md-6">
+            <div class="card card-info">
+                <div class="card-header">
+                    <h3 class="card-title">Relatos por Categoria</h3>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoriaChart"
+                        style="min-height: 250px; height: 250px; max-height: 250px; max-width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Dados de Status
+        const statusData = {{ status_stats_json| safe
+    }};
+    const statusLabels = statusData.map(item => item.status_atual);
+    const statusValues = statusData.map(item => item.total);
+
+    new Chart(document.getElementById('statusChart'), {
+        type: 'pie',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusValues,
+                backgroundColor: ['#f39c12', '#3498db', '#9b59b6', '#2ecc71', '#e74c3c']
+            }]
+        }
+    });
+
+    // Dados de Categoria
+    const catData = {{ categoria_stats_json| safe }};
+    const catLabels = catData.map(item => item.categoria__nome);
+    const catValues = catData.map(item => item.total);
+
+    new Chart(document.getElementById('categoriaChart'), {
+        type: 'bar',
+        data: {
+            labels: catLabels,
+            datasets: [{
+                label: 'Quantidade',
+                data: catValues,
+                backgroundColor: '#3498db'
+            }]
+        },
+        options: {
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+    });
+</script>
+{% endblock %}

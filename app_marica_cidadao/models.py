@@ -44,6 +44,10 @@ class RelatoZeladoria(models.Model):
     # Controle de estado
     status_atual = models.CharField(max_length=20, choices=STATUS_CHOICES, default='recebido')
     
+    # Feedback do Cidadão (Pós-Resolução)
+    avaliacao = models.IntegerField(null=True, blank=True, help_text="Avaliação de 1 a 5 estrelas")
+    comentario_cidadao = models.TextField(null=True, blank=True, help_text="Comentário do cidadão sobre a resolução")
+
     # Timestamps
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

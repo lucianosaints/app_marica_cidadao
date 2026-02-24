@@ -229,6 +229,7 @@ JAZZMIN_SETTINGS = {
     "user_avatar": None,
     "topmenu_links": [
         {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Dashboard Estatístico", "url": "admin_dashboard_stats", "new_window": False},
         {"name": "Site Maricá Cidadão", "url": "/", "new_window": True},
         {"model": "auth.User"},
     ],
