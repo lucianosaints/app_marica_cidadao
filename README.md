@@ -1,62 +1,78 @@
-# App Maricá Cidadão - Sistema de Zeladoria Urbana
+# 🏡 Maricá Cidadão - Zeladoria Urbana Inteligente
 
-Este é um sistema completo de Zeladoria Urbana desenvolvido para permitir que os cidadãos reportem problemas na cidade (como buracos na via, lâmpadas queimadas e focos de dengue) diretamente para a prefeitura, acompanhando a resolução em tempo real através de uma linha do tempo transparente.
+![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Oracle](https://img.shields.io/badge/Oracle_Cloud-F80000?style=for-the-badge&logo=oracle&logoColor=white)
 
-## 🚀 Tecnologias Utilizadas
-
-### Backend (API e Painel Administrativo)
-- **Python 3.11**
-- **Django 5.2** - Framework web principal.
-- **Django REST Framework (DRF)** - Construção da API RESTful para comunicação com o aplicativo do cidadão.
-- **Django REST Authtoken** - Sistema de autenticação seguro baseado em tokens para as requisições da API.
-- **Django-CORS-Headers** - Gerenciamento de permissões CORS (Cross-Origin Resource Sharing) para permitir requisições do frontend.
-- **Pillow** - Biblioteca para manipulação e salvamento das fotos enviadas pelos moradores.
-- **SQLite3** - Banco de dados leve utilizado no ambiente de desenvolvimento.
-
-### Frontend (Aplicação do Cidadão)
-- **HTML5, CSS3, JavaScript (Vanilla e ES6+)**
-- **React 18** (via CDN) - Criação de uma Single Page Application (SPA) para uma experiência de usuário fluida e reativa sem necessidade de recarregar a página.
-- **Babel** (via CDN) - Transpilação de código JSX para JavaScript nativo interpretável pelos navegadores em tempo de execução.
-- **Fetch API** - Comunicação assíncrona baseada em Promises com a API do Django.
-- **HTML5 Geolocation API** - Captura automática das coordenadas de GPS (Latitude/Longitude) do dispositivo do usuário ao relatar um problema.
-
-## 📋 Funcionalidades Em Destaque
-
-**Para o Cidadão:**
-- Cadastro e Autenticação (Login simulado com Gov.br).
-- Relato de problemas urbanos com categoria, descrição, foto capturada pelo celular e coordenadas GPS automáticas.
-- Dashboard "Meus Protocolos": Acompanhamento visual de todos os chamados abertos.
-- Linha do Tempo: Visualização do histórico detalhado de mudanças de status do pedido (ex: Recebido, Em Análise, Equipe Despachada, Resolvido).
-
-**Para a Prefeitura (Painel Admin Django):**
-- Gerenciamento de Categorias de Problemas com estimativas de prazos.
-- Visualização de todos os Relatos centralizados, com fotos e locais exatos.
-- **Automação de Transparência:** Toda vez que um agente da prefeitura altera o status do relato de um cidadão no painel, o sistema cria automaticamente um novo registro no Histórico de Status daquele morador.
-
-## ⚙️ Como Executar Localmente
-
-**Pré-requisitos:** Python 3 instalado.
-
-1. **Clone o repositório:**
-   ```bash
-   git clone [URL_DO_SEU_REPOSITORIO_AQUI]
-   cd app_marica_cidadao
-   ```
-
-2. **Instale as dependências requeridas do backend:**
-   ```bash
-   pip install django djangorestframework django-cors-headers pillow
-   ```
-
-3. **Inicie o Servidor Backend (Django):**
-   ```bash
-   python manage.py makemigrations
-   python manage.py migrate
-   python manage.py runserver
-   ```
-
-4. **Inicie o Frontend:**
-   Basta abrir o arquivo `frontend_simples/index.html` diretamente no seu navegador, ou hospedá-mo em um servidor local estático simples (como a extensão Live Server do VSCode).
+O **Maricá Cidadão** é uma plataforma moderna de Zeladoria Urbana que conecta os moradores de Maricá diretamente à prefeitura. O sistema permite reportar problemas (buracos, iluminação, lixo) com geolocalização automática e acompanhar a resolução através de uma linha do tempo transparente.
 
 ---
-*Dúvidas ou sugestões? Envie um pull request!*
+
+## ✨ Funcionalidades em Destaque
+
+### 🛰️ Geolocalização Automática (GPS)
+Implementamos uma captura proativa de GPS. Assim que o cidadão abre o formulário, o sistema sincroniza com os satélites e marca o local exato do problema no mapa sem necessidade de intervenção manual (via HTTPS).
+
+### 📊 Painel Administrativo Premium
+Interface administrativa baseada no **Jazzmin**, oferecendo uma experiência de gestão otimizada para os servidores da prefeitura, com dashboards, filtros avançados e logs de auditoria.
+
+### 🛡️ Transparência Total
+Cada mudança de status gera um registro histórico automático. O cidadão recebe atualizações em tempo real sobre o progresso do seu chamado.
+
+---
+
+## 🛠️ Stack Tecnológica
+
+### Backend & API
+- **Django 5.x**: Framework robusto para a lógica de negócio e Admin.
+- **Django REST Framework**: API escalável para comunicação com o frontend.
+- **Gunicorn & WhiteNoise**: Servidor de aplicação e gestão de arquivos estáticos em produção.
+- **PostgreSQL**: Banco de dados relacional robusto para produção.
+
+### Frontend
+- **React 18**: Interface reativa e rápida para o cidadão.
+- **Leaflet Maps**: Integração de mapas interativos para marcação de incidentes.
+- **CSS3 Personalizado**: Design responsivo e focado em dispositivos móveis (Mobile-First).
+
+### Infraestrutura & Deploy
+- **Docker & Docker Compose**: Orquestração de containers para garantir que o app rode igual em qualquer lugar.
+- **Oracle Cloud (OCI)**: Hospedagem de alta performance.
+- **ngrok**: Túnel seguro HTTPS para habilitar geolocalização em navegadores modernos.
+
+---
+
+## 🚀 Como Executar o Projeto
+
+### Modo Docker (Recomendado)
+Para rodar o sistema completo em segundos:
+```bash
+docker-compose up --build -d
+```
+Acesse: `http://localhost:8000`
+
+### Instalação Manual (Desenvolvimento)
+1. Instale as dependências: `pip install -r requirements.txt`
+2. Configure o `.env` (use o `.env.example` como base).
+3. Rode as migrações: `python manage.py migrate`
+4. Inicie o servidor: `python manage.py runserver`
+
+---
+
+## ☁️ Deploy na Oracle Cloud (OCI)
+
+O projeto está configurado para deploy contínuo em instâncias Ubuntu na OCI.
+1. Configure as **Ingress Rules** na VCN (Porta 8000).
+2. Use o script `scripts/setup_oci.sh` para preparar o servidor.
+3. Utilize o **ngrok** na VPS para ganhar o endereço HTTPS necessário para o GPS automático:
+```bash
+nohup ngrok http 8000 > /dev/null 2>&1 &
+```
+
+---
+
+## 👥 Contribuição
+Desenvolvido para a melhoria da gestão urbana de Maricá. Pull requests são bem-vindos!
+
+---
+*Prefeitura de Maricá - Inovação e Zeladoria.*
