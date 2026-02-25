@@ -88,6 +88,26 @@ class RelatoZeladoriaSerializer(serializers.ModelSerializer):
         # O cidadão não pode alterar o status ou a data de criação manualmente
         read_only_fields = ['status_atual', 'criado_em']
 
+    def validate(self, data):
+        """
+        Validações customizadas para o Relato.
+        """
+        # Se estiver tentando enviar avaliação/comentário
+        if 'avaliacao' in data or 'comentario_cidadao' in data:
+            # No caso de criação, obviamente não pode ter avaliação
+            if not self.instance:
+                raise serializers.ValidationError(
+                    {"avaliacao": "Você não pode avaliar um chamado que ainda não foi criado."}
+                )
+            
+            # No caso de atualização, só pode se o status for resolvido
+            if self.instance.status_atual != 'resolvido':
+                raise serializers.ValidationError(
+                    {"avaliacao": "A avaliação só é permitida após a resolução do chamado pela prefeitura."}
+                )
+        
+        return data
+
     def create(self, validated_data):
         # Pega o usuário logado automaticamente da requisição
         validated_data['cidadao'] = self.context['request'].user

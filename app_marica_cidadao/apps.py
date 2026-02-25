@@ -4,3 +4,6 @@ class AppMaricaCidadaoConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'app_marica_cidadao'
     verbose_name = 'Maricá Cidadão'
+
+    def ready(self):
+        import app_marica_cidadao.signals
