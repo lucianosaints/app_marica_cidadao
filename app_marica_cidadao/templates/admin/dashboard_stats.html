@@ -333,20 +333,21 @@
             // 3. Mapa de Calor (Heatmap)
             const heatmapPoints = JSON.parse('{{ heatmap_data_json|safe }}');
             if (heatmapPoints.length > 0) {
-                // Centraliza o mapa em Maricá (usando a média ou ponto fixo)
+                // Centraliza o mapa em Maricá
                 var map = L.map('heatmap').setView([-22.919, -42.818], 13);
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}}.png', {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; OpenStreetMap contributors'
                 }).addTo(map);
 
-                const points = heatmapPoints.map(p => [p.latitude, p.longitude, 0.5]); // intensity 0.5
+                const points = heatmapPoints.map(p => [parseFloat(p.latitude), parseFloat(p.longitude), 1.0]);
 
                 L.heatLayer(points, {
-                    radius: 25,
+                    radius: 35,
                     blur: 15,
                     maxZoom: 17,
-                    gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
+                    max: 1.0,
+                    gradient: { 0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1: 'red' }
                 }).addTo(map);
             }
 
