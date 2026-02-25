@@ -44,12 +44,15 @@ def analisar_imagem_problema(image_path):
         """
 
         response = model.generate_content([prompt, img])
+        text_response = response.text.strip()
         
         # Limpa a resposta para garantir que seja um JSON válido
-        text_response = response.text.strip()
         if "```json" in text_response:
             text_response = text_response.split("```json")[1].split("```")[0].strip()
-        
+        elif "```" in text_response:
+            text_response = text_response.split("```")[1].split("```")[0].strip()
+
+        print(f"Resposta bruta da IA: {text_response}")
         return json.loads(text_response)
 
     except Exception as e:
