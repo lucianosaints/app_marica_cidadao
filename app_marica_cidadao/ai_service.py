@@ -18,9 +18,27 @@ def analisar_imagem_problema(image_path):
         print(f"Iniciando análise de imagem com Gemini: {image_path}")
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # Tenta usar o modelo flash-latest
-        model_name = 'gemini-1.5-flash-latest'
-        model = genai.GenerativeModel(model_name)
+        # Testar nomes de modelos em ordem de preferência
+        modelos_para_testar = [
+            'models/gemini-1.5-flash',
+            'models/gemini-1.5-flash-latest',
+            'models/gemini-2.5-flash', # Encontrado no log do servidor
+            'gemini-1.5-flash',
+            'gemini-pro-vision'
+        ]
+        
+        model = None
+        for name in modelos_para_testar:
+            try:
+                print(f"Tentando modelo: {name}...")
+                model = genai.GenerativeModel(name)
+                # O teste real só acontece no generate_content
+                break
+            except:
+                continue
+
+        if not model:
+            return {"error": "Nenhum modelo Gemini disponível para esta chave."}
 
         img = PIL.Image.open(image_path)
         
