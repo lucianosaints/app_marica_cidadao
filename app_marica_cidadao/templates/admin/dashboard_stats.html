@@ -78,19 +78,28 @@
         background: white;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         margin-bottom: 30px;
-        height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
     .chart-card .card-header {
         background: transparent;
         border-bottom: 1px solid #eee;
-        padding: 20px;
+        padding: 15px 20px;
     }
 
     .chart-card .card-title {
         font-weight: 600;
         color: var(--dark);
         margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .chart-card .card-body {
+        padding: 20px;
+        position: relative;
+        min-height: 300px;
+        /* Garante altura mínima para o canvas */
     }
 
     /* Gradients for icons */
@@ -115,9 +124,14 @@
 {% block content %}
 <div class="dashboard-container">
     <div class="row">
-        <div class="col-12 mb-4">
-            <h1 class="h3 mb-0 text-gray-800">📊 Central de Inteligência Urbana - Maricá</h1>
-            <p class="text-muted small">Monitoramento em tempo real da zeladoria citadina</p>
+        <div class="col-12 mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0 text-gray-800">📊 Central de Inteligência Urbana - Maricá</h1>
+                <p class="text-muted small mb-0">Monitoramento em tempo real da zeladoria citadina</p>
+            </div>
+            <div class="text-right">
+                <span class="badge badge-info p-2">LIVE</span>
+            </div>
         </div>
     </div>
 
@@ -186,7 +200,7 @@
                     <h5 class="card-title">Evolução dos Relatos (Últimos 30 Dias)</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="evolucaoChart" style="height: 350px;"></canvas>
+                    <canvas id="evolucaoChart"></canvas>
                 </div>
             </div>
         </div>
@@ -198,13 +212,13 @@
                     <h5 class="card-title">Status dos Chamados</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="statusChart" style="height: 350px;"></canvas>
+                    <canvas id="statusChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row mt-4">
+    <div class="row mt-2">
         <!-- Top Categorias -->
         <div class="col-12">
             <div class="chart-card">
@@ -212,7 +226,7 @@
                     <h5 class="card-title">Volume por Categoria de Problema</h5>
                 </div>
                 <div class="card-body">
-                    <canvas id="categoriaChart" style="height: 300px; width: 100%;"></canvas>
+                    <canvas id="categoriaChart" style="height: 250px!important;"></canvas>
                 </div>
             </div>
         </div>
@@ -232,94 +246,103 @@
             gray: '#95a5a6'
         };
 
-        // 1. Gráfico de Evolução (Linha)
-        const evolData = {{ evolucao_stats_json| safe
-    }};
-    new Chart(document.getElementById('evolucaoChart'), {
-        type: 'line',
-        data: {
-            labels: evolData.map(d => d.data),
-            datasets: [{
-                label: 'Novos Relatos',
-                data: evolData.map(d => d.total),
-                borderColor: colors.blue,
-                backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                x: { grid: { display: false } }
+        try {
+            // 1. Gráfico de Evolução (Linha)
+            const evolData = JSON.parse('{{ evolucao_stats_json|safe }}');
+            if (evolData.length > 0) {
+                new Chart(document.getElementById('evolucaoChart'), {
+                    type: 'line',
+                    data: {
+                        labels: evolData.map(d => d.data),
+                        datasets: [{
+                            label: 'Novos Relatos',
+                            data: evolData.map(d => d.total),
+                            borderColor: colors.blue,
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 5,
+                            pointHoverRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
             }
-        }
-    });
 
-    // 2. Gráfico de Status (Doughnut)
-    const statusRaw = {{ status_stats_json| safe }};
-    const statusLabelsMap = {
-        'recebido': 'Pendente',
-        'em_progresso': 'Em Execução',
-        'resolvido': 'Resolvido',
-        'arquivado': 'Arquivado'
-    };
-    const statusColorsMap = {
-        'recebido': colors.orange,
-        'em_progresso': colors.purple,
-        'resolvido': colors.green,
-        'arquivado': colors.gray
-    };
+            // 2. Gráfico de Status (Doughnut)
+            const statusRaw = JSON.parse('{{ status_stats_json|safe }}');
+            if (statusRaw.length > 0) {
+                const statusLabelsMap = {
+                    'recebido': 'Pendente',
+                    'em_progresso': 'Em Execução',
+                    'resolvido': 'Resolvido',
+                    'arquivado': 'Arquivado'
+                };
+                const statusColorsMap = {
+                    'recebido': colors.orange,
+                    'em_progresso': colors.purple,
+                    'resolvido': colors.green,
+                    'arquivado': colors.gray
+                };
 
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: statusRaw.map(s => statusLabelsMap[s.status_atual] || s.status_atual),
-            datasets: [{
-                data: statusRaw.map(s => s.total),
-                backgroundColor: statusRaw.map(s => statusColorsMap[s.status_atual] || colors.blue),
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom' }
+                new Chart(document.getElementById('statusChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: statusRaw.map(s => statusLabelsMap[s.status_atual] || s.status_atual),
+                        datasets: [{
+                            data: statusRaw.map(s => s.total),
+                            backgroundColor: statusRaw.map(s => statusColorsMap[s.status_atual] || colors.blue),
+                            hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
             }
-        }
-    });
 
-    // 3. Gráfico de Categorias (Barras Horizontais)
-    const catData = {{ categoria_stats_json| safe }};
-    new Chart(document.getElementById('categoriaChart'), {
-        type: 'bar',
-        data: {
-            labels: catData.map(c => c.categoria__nome),
-            datasets: [{
-                label: 'Quantidade',
-                data: catData.map(c => c.total),
-                backgroundColor: colors.blue + '80', // semi-transparent
-                borderColor: colors.blue,
-                borderWidth: 1,
-                borderRadius: 8
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: { beginAtZero: true, ticks: { stepSize: 1 } },
-                y: { grid: { display: false } }
+            // 3. Gráfico de Categorias (Barras Horizontais)
+            const catData = JSON.parse('{{ categoria_stats_json|safe }}');
+            if (catData.length > 0) {
+                new Chart(document.getElementById('categoriaChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: catData.map(c => c.categoria__nome || 'Sem categoria'),
+                        datasets: [{
+                            label: 'Quantidade',
+                            data: catData.map(c => c.total),
+                            backgroundColor: colors.blue + '80',
+                            borderColor: colors.blue,
+                            borderWidth: 1,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            y: { grid: { display: false } }
+                        }
+                    }
+                });
             }
+        } catch (e) {
+            console.error("Erro ao inicializar gráficos:", e);
         }
-    });
     });
 </script>
 {% endblock %}

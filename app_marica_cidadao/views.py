@@ -4,6 +4,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import os
+import json
 from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RelatoZeladoria, CategoriaProblema
@@ -177,13 +178,13 @@ class DashboardAdminView(TemplateView):
             total=Count('id')
         ).order_by('data')
 
-        # 4. Formatação para o Chart.js
-        context['status_stats_json'] = list(status_stats)
-        context['categoria_stats_json'] = list(categoria_stats)
-        context['evolucao_stats_json'] = [
+        # 4. Formatação para o Chart.js (JSON Seguro)
+        context['status_stats_json'] = json.dumps(list(status_stats))
+        context['categoria_stats_json'] = json.dumps(list(categoria_stats))
+        context['evolucao_stats_json'] = json.dumps([
             {'data': item['data'].strftime('%d/%m'), 'total': item['total']} 
             for item in evolucao_stats
-        ]
+        ])
         
         # 5. KPIs (Indicadores Chave)
         context['total_relatos'] = RelatoZeladoria.objects.count()
