@@ -17,7 +17,10 @@ def analisar_imagem_problema(image_path):
     try:
         print(f"Iniciando análise de imagem com Gemini: {image_path}")
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        
+        # Tenta usar o modelo flash-latest
+        model_name = 'gemini-1.5-flash-latest'
+        model = genai.GenerativeModel(model_name)
 
         img = PIL.Image.open(image_path)
         
@@ -57,4 +60,9 @@ def analisar_imagem_problema(image_path):
 
     except Exception as e:
         print(f"Erro ao chamar Gemini: {e}")
+        try:
+            available_models = [m.name for m in genai.list_models()]
+            print(f"Modelos disponíveis para esta chave: {available_models}")
+        except:
+            print("Não foi possível listar os modelos da API.")
         return {"error": str(e)}
