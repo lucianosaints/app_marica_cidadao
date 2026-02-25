@@ -228,14 +228,22 @@ JAZZMIN_SETTINGS = {
     "search_model": ["auth.User", "app_marica_cidadao.RelatoZeladoria"],
     "user_avatar": None,
     "topmenu_links": [
-        {"name": "Home",  "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "Dashboard Estatístico", "url": "admin_dashboard_stats", "new_window": False},
-        {"name": "Site Maricá Cidadão", "url": "/", "new_window": True},
+        {"name": "Início",  "url": "admin:index", "permissions": ["auth.view_user"]},
+        {"name": "Dashboard", "url": "admin_dashboard_stats", "new_window": False},
+        {"name": "Ver Site", "url": "/", "new_window": True},
         {"model": "auth.User"},
     ],
     "show_sidebar": True,
     "navigation_expanded": True,
     "order_with_respect_to": ["app_marica_cidadao", "auth", "authtoken"],
+    "custom_links": {
+        "app_marica_cidadao": [{
+            "name": "📊 Dashboard Premium", 
+            "url": "admin_dashboard_stats", 
+            "icon": "fas fa-chart-line",
+            "permissions": ["auth.view_user"]
+        }]
+    },
     "icons": {
         "auth": "fas fa-users-cog",
         "auth.user": "fas fa-user-shield",

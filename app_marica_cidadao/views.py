@@ -147,6 +147,9 @@ class APIAnalisarFoto(APIView):
             return Response({"error": str(e)}, status=500)
 
 from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from datetime import timedelta
 from django.views.generic import TemplateView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
@@ -157,14 +160,35 @@ class DashboardAdminView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Estatísticas de Status
-        status_stats = RelatoZeladoria.objects.values('status_atual').annotate(total=Count('id'))
-        # Estatísticas de Categoria
-        categoria_stats = RelatoZeladoria.objects.values('categoria__nome').annotate(total=Count('id'))
         
+        # 1. Estatísticas de Status
+        status_stats = RelatoZeladoria.objects.values('status_atual').annotate(total=Count('id'))
+        
+        # 2. Estatísticas de Categoria
+        categoria_stats = RelatoZeladoria.objects.values('categoria__nome').annotate(total=Count('id')).order_by('-total')
+        
+        # 3. Evolução dos últimos 30 dias
+        trinta_dias_atras = timezone.now() - timedelta(days=30)
+        evolucao_stats = RelatoZeladoria.objects.filter(
+            criado_em__gte=trinta_dias_atras
+        ).annotate(
+            data=TruncDate('criado_em')
+        ).values('data').annotate(
+            total=Count('id')
+        ).order_by('data')
+
+        # 4. Formatação para o Chart.js
         context['status_stats_json'] = list(status_stats)
         context['categoria_stats_json'] = list(categoria_stats)
+        context['evolucao_stats_json'] = [
+            {'data': item['data'].strftime('%d/%m'), 'total': item['total']} 
+            for item in evolucao_stats
+        ]
+        
+        # 5. KPIs (Indicadores Chave)
         context['total_relatos'] = RelatoZeladoria.objects.count()
         context['resolvidos'] = RelatoZeladoria.objects.filter(status_atual='resolvido').count()
+        context['pendentes'] = RelatoZeladoria.objects.filter(status_atual='recebido').count()
+        context['em_andamento'] = RelatoZeladoria.objects.filter(status_atual='em_progresso').count()
         
         return context
