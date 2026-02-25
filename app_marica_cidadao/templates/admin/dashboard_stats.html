@@ -219,6 +219,21 @@
     </div>
 
     <div class="row mt-2">
+        <!-- Mapa de Calor -->
+        <div class="col-lg-12">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title">Mapa de Calor Urbana (Densidade de Incidentes)</h5>
+                    <span class="badge badge-warning">GEO-INTELIGÊNCIA</span>
+                </div>
+                <div class="card-body">
+                    <div id="heatmap" style="width: 100%; height: 500px; border-radius: 10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
         <!-- Top Categorias -->
         <div class="col-12">
             <div class="chart-card">
@@ -233,6 +248,9 @@
     </div>
 </div>
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -312,7 +330,27 @@
                 });
             }
 
-            // 3. Gráfico de Categorias (Barras Horizontais)
+            // 3. Mapa de Calor (Heatmap)
+            const heatmapPoints = JSON.parse('{{ heatmap_data_json|safe }}');
+            if (heatmapPoints.length > 0) {
+                // Centraliza o mapa em Maricá (usando a média ou ponto fixo)
+                var map = L.map('heatmap').setView([-22.919, -42.818], 13);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                const points = heatmapPoints.map(p => [p.latitude, p.longitude, 0.5]); // intensity 0.5
+
+                L.heatLayer(points, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 17,
+                    gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
+                }).addTo(map);
+            }
+
+            // 4. Gráfico de Categorias (Barras Horizontais)
             const catData = JSON.parse('{{ categoria_stats_json|safe }}');
             if (catData.length > 0) {
                 new Chart(document.getElementById('categoriaChart'), {

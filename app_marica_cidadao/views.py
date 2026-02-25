@@ -186,7 +186,15 @@ class DashboardAdminView(TemplateView):
             for item in evolucao_stats
         ])
         
-        # 5. KPIs (Indicadores Chave)
+        # 5. Geocalização para Heatmap
+        coordenadas = RelatoZeladoria.objects.exclude(
+            latitude__isnull=True
+        ).exclude(
+            longitude__isnull=True
+        ).values('latitude', 'longitude')
+        context['heatmap_data_json'] = json.dumps(list(coordenadas))
+        
+        # 6. KPIs (Indicadores Chave)
         context['total_relatos'] = RelatoZeladoria.objects.count()
         context['resolvidos'] = RelatoZeladoria.objects.filter(status_atual='resolvido').count()
         context['pendentes'] = RelatoZeladoria.objects.filter(status_atual='recebido').count()
