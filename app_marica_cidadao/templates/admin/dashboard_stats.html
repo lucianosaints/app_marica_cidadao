@@ -250,7 +250,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script src="https://leaflet.github.io/Leaflet.heat/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -330,25 +330,60 @@
                 });
             }
 
-            // 3. Mapa de Calor (Heatmap)
+            // 3. Mapa de Calor (Heatmap) + Marcadores
             const heatmapPoints = JSON.parse('{{ heatmap_data_json|safe }}');
+            console.log("Pontos carregados no mapa:", heatmapPoints);
+
             if (heatmapPoints.length > 0) {
-                // Centraliza o mapa em Maricá
-                var map = L.map('heatmap').setView([-22.919, -42.818], 13);
+                // Inicializa o mapa centralizado em Maricá por padrão
+                var map = L.map('heatmap').setView([-22.919, -42.818], 12);
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '&copy; OpenStreetMap contributors'
                 }).addTo(map);
 
-                const points = heatmapPoints.map(p => [parseFloat(p.latitude), parseFloat(p.longitude), 1.0]);
+                const heatPoints = [];
+                const markerCoords = [];
 
-                L.heatLayer(points, {
-                    radius: 35,
-                    blur: 15,
-                    maxZoom: 17,
-                    max: 1.0,
-                    gradient: { 0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1: 'red' }
-                }).addTo(map);
+                heatmapPoints.forEach(p => {
+                    const lat = parseFloat(p.latitude);
+                    const lng = parseFloat(p.longitude);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        // USA CIRCLEMARKER (Mais robusto que marcador de imagem)
+                        L.circleMarker([lat, lng], {
+                            radius: 8,
+                            fillColor: "#e74c3c", // Vermelho forte
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map)
+                            .bindPopup(`<b>Ocorrência</b><br>Lat: ${lat}<br>Long: ${lng}`);
+
+                        markerCoords.push([lat, lng]);
+                        heatPoints.push([lat, lng, 0.8]);
+                    }
+                });
+
+                // Tenta ajustar o zoom para englobar todos os pontos encontrados
+                if (markerCoords.length > 0) {
+                    const bounds = L.latLngBounds(markerCoords);
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                }
+
+                // Inicializa Camada de Calor
+                if (typeof L.heatLayer === 'function') {
+                    L.heatLayer(heatPoints, {
+                        radius: 40,
+                        blur: 15,
+                        maxZoom: 15,
+                        max: 1.0,
+                        gradient: { 0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1: 'red' }
+                    }).addTo(map);
+                }
+            } else {
+                console.warn("Nenhum ponto de geolocalização encontrado para o mapa.");
             }
 
             // 4. Gráfico de Categorias (Barras Horizontais)
