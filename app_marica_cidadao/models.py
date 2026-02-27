@@ -41,6 +41,10 @@ class RelatoZeladoria(models.Model):
     longitude = models.FloatField(help_text="Longitude", null=True, blank=True)
     endereco_aproximado = models.CharField(max_length=255, blank=True, null=True)
     
+    # Propriedade Privada
+    e_propriedade_privada = models.BooleanField(default=False, help_text="O problema é em uma propriedade privada?")
+    comprovante_titularidade = models.FileField(upload_to='comprovantes_relatos/', blank=True, null=True, help_text="Necessário se for propriedade privada")
+    
     # Controle de estado
     status_atual = models.CharField(max_length=20, choices=STATUS_CHOICES, default='recebido')
     

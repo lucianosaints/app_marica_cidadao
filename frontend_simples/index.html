@@ -207,6 +207,8 @@
       const [sugestaoIa, setSugestaoIa] = useState(null);
       const [localizacaoConfirmada, setLocalizacaoConfirmada] = useState(false);
       const [listaCategorias, setListaCategorias] = useState([]);
+      const [ePropriedadePrivada, setEPropriedadePrivada] = useState(false);
+      const [comprovante, setComprovante] = useState(null);
 
       const mapRef = React.useRef(null);
       const markerRef = React.useRef(null);
@@ -338,6 +340,10 @@
         formData.append('latitude', parseFloat(localizacao.lat));
         formData.append('longitude', parseFloat(localizacao.lng));
         formData.append('foto_problema', foto);
+        formData.append('e_propriedade_privada', ePropriedadePrivada);
+        if (ePropriedadePrivada && comprovante) {
+          formData.append('comprovante_titularidade', comprovante);
+        }
 
         try {
           const resposta = await fetch('/api/relatos/', {
@@ -355,6 +361,8 @@
             setFoto(null);
             setPreviewUrl(null);
             setCategoria('');
+            setEPropriedadePrivada(false);
+            setComprovante(null);
             if (onSuccess) onSuccess();
           } else {
             const erroData = await resposta.json();
@@ -440,6 +448,40 @@
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', minHeight: '60px', outline: 'none', transition: 'box-shadow 0.3s' }}
                   required
                 />
+              </div>
+
+              {/* Seção Propriedade Privada */}
+              <div style={{ backgroundColor: '#fff5f5', padding: '15px', borderRadius: '12px', border: '1px solid #fed7d7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <input
+                    type="checkbox"
+                    id="e_propriedade_privada"
+                    checked={ePropriedadePrivada}
+                    onChange={(e) => setEPropriedadePrivada(e.target.checked)}
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                  <label htmlFor="e_propriedade_privada" style={{ marginBottom: 0, color: '#c53030' }}>
+                    O problema é em uma <strong>Propriedade Privada</strong>?
+                  </label>
+                </div>
+
+                {ePropriedadePrivada && (
+                  <div style={{ marginTop: '10px', borderTop: '1px solid #feb2b2', paddingTop: '10px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>
+                      📄 Anexar Comprovante de Titularidade:
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={(e) => setComprovante(e.target.files[0])}
+                      required={ePropriedadePrivada}
+                      style={{ fontSize: '12px', marginBottom: '0' }}
+                    />
+                    <p style={{ fontSize: '10px', color: '#e53e3e', marginTop: '5px' }}>
+                      * Obrigatório para serviços em locais particulares (ex: poda interna).
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
