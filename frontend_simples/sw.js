@@ -1,7 +1,6 @@
 const CACHE_NAME = 'marica-cidadao-v1';
 const urlsToCache = [
   '/',
-  '/index.html',
   '/logo/Logo-prefeitura.png',
   '/logo/Logo-Ictim.png',
   '/logo/fundo.png',
