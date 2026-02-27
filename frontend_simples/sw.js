@@ -4,7 +4,7 @@ const urlsToCache = [
   '/logo/Logo-prefeitura.png',
   '/logo/Logo-Ictim.png',
   '/logo/fundo.png',
-  '/logo/pwa_icon_512.png'
+  '/logo/pwa_icon_512.jpg'
 ];
 
 self.addEventListener('install', event => {
