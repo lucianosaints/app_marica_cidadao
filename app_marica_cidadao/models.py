@@ -45,6 +45,7 @@ class RelatoZeladoria(models.Model):
     # Propriedade Privada
     e_propriedade_privada = models.BooleanField(default=False, help_text="O problema é em uma propriedade privada?")
     comprovante_titularidade = models.FileField(upload_to='comprovantes_relatos/', blank=True, null=True, help_text="Necessário se for propriedade privada")
+    aceite_termo_ambiental = models.BooleanField(default=False, help_text="Ciente da compensação ambiental conforme Lei 2367/2011")
     
     # Controle de estado
     status_atual = models.CharField(max_length=20, choices=STATUS_CHOICES, default='recebido')
