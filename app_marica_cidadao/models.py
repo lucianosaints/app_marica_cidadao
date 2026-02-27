@@ -35,7 +35,8 @@ class RelatoZeladoria(models.Model):
     
     # Dados do problema
     descricao = models.TextField(help_text="Descrição detalhada do cidadão")
-    foto_problema = models.ImageField(upload_to='relatos_cidadao/')
+    foto_problema = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto tirada na hora (Câmera)")
+    foto_galeria = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto enviada da galeria")
     
     # Geolocalização
     latitude = models.FloatField(help_text="Latitude", null=True, blank=True)
