@@ -993,7 +993,9 @@
                     }}>
                       #{relato.id}
                     </span>
-                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>{relato.categoria_nome}</h3>
+                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>
+                      {relato.categoria_emoji} {relato.categoria_nome}
+                    </h3>
                     <div style={{ marginTop: '5px', color: '#95a5a6', fontSize: '13px' }}>
                       📅 Aberto em {new Date(relato.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </div>

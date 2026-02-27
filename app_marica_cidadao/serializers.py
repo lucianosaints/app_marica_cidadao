@@ -76,12 +76,13 @@ class RelatoZeladoriaSerializer(serializers.ModelSerializer):
     # Traz o histórico aninhado (apenas leitura para o cidadão)
     historico = HistoricoStatusSerializer(many=True, read_only=True)
     categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
+    categoria_emoji = serializers.CharField(source='categoria.emoji', read_only=True)
     status_display = serializers.CharField(source='get_status_atual_display', read_only=True)
 
     class Meta:
         model = RelatoZeladoria
         fields = [
-            'id', 'categoria', 'categoria_nome', 'descricao', 'foto_problema',
+            'id', 'categoria', 'categoria_nome', 'categoria_emoji', 'descricao', 'foto_problema',
             'endereco_aproximado', 'status_atual', 'status_display', 'criado_em',
             'historico', 'latitude', 'longitude', 'avaliacao', 'comentario_cidadao',
             'e_propriedade_privada', 'comprovante_titularidade'
