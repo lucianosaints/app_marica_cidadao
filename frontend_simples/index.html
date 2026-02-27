@@ -423,7 +423,9 @@
                 >
                   <option value="">Selecione uma categoria...</option>
                   {listaCategorias.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                    <option key={cat.id} value={cat.id}>
+                      {cat.emoji ? `${cat.emoji} ${cat.nome}` : cat.nome}
+                    </option>
                   ))}
                 </select>
               </div>

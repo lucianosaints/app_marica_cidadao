@@ -9,6 +9,7 @@ class CategoriaProblema(models.Model):
     nome = models.CharField(max_length=100)
     descricao = models.TextField(blank=True, null=True)
     icone = models.ImageField(upload_to='icones_categorias/', blank=True, null=True)
+    emoji = models.CharField(max_length=10, blank=True, null=True, help_text="Emoji para exibição no formulário")
     tempo_estimado_resolucao = models.IntegerField(
         help_text="Tempo estimado para resolução em dias"
     )

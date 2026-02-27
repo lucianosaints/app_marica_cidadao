@@ -62,7 +62,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class CategoriaProblemaSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoriaProblema
-        fields = ['id', 'nome', 'descricao']
+        fields = ['id', 'nome', 'descricao', 'emoji']
 
 
 class HistoricoStatusSerializer(serializers.ModelSerializer):
