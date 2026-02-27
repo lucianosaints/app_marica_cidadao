@@ -276,19 +276,21 @@
                             label: 'Novos Relatos',
                             data: evolData.map(d => d.total),
                             borderColor: colors.blue,
-                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            backgroundColor: 'rgba(52, 152, 219, 0.05)',
                             fill: true,
                             tension: 0.4,
-                            pointRadius: 5,
-                            pointHoverRadius: 8
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            borderWidth: 3
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
                         scales: {
-                            y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                            x: { grid: { display: false } }
+                            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { stepSize: 1, font: { family: 'Inter' } } },
+                            x: { grid: { display: false }, ticks: { font: { family: 'Inter' } } }
                         }
                     }
                 });
@@ -304,10 +306,10 @@
                     'arquivado': 'Arquivado'
                 };
                 const statusColorsMap = {
-                    'recebido': colors.orange,
-                    'em_progresso': colors.purple,
-                    'resolvido': colors.green,
-                    'arquivado': colors.gray
+                    'recebido': '#f1c40f', // Amarelo Premium
+                    'em_progresso': '#9b59b6', // Roxo
+                    'resolvido': '#2ecc71', // Verde
+                    'arquivado': '#95a5a6'  // Cinza
                 };
 
                 new Chart(document.getElementById('statusChart'), {
@@ -317,14 +319,16 @@
                         datasets: [{
                             data: statusRaw.map(s => s.total),
                             backgroundColor: statusRaw.map(s => statusColorsMap[s.status_atual] || colors.blue),
-                            hoverOffset: 10
+                            borderWidth: 0,
+                            hoverOffset: 15
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        cutout: '75%',
                         plugins: {
-                            legend: { position: 'bottom' }
+                            legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter', size: 11 } } }
                         }
                     }
                 });
