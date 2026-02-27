@@ -62,7 +62,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 class CategoriaProblemaSerializer(serializers.ModelSerializer):
     class Meta:
         model = CategoriaProblema
-        fields = ['id', 'nome', 'descricao']
+        fields = ['id', 'nome', 'descricao', 'emoji']
 
 
 class HistoricoStatusSerializer(serializers.ModelSerializer):
@@ -76,17 +76,39 @@ class RelatoZeladoriaSerializer(serializers.ModelSerializer):
     # Traz o histórico aninhado (apenas leitura para o cidadão)
     historico = HistoricoStatusSerializer(many=True, read_only=True)
     categoria_nome = serializers.CharField(source='categoria.nome', read_only=True)
+    categoria_emoji = serializers.CharField(source='categoria.emoji', read_only=True)
     status_display = serializers.CharField(source='get_status_atual_display', read_only=True)
 
     class Meta:
         model = RelatoZeladoria
         fields = [
-            'id', 'categoria', 'categoria_nome', 'descricao', 'foto_problema',
+            'id', 'categoria', 'categoria_nome', 'categoria_emoji', 'descricao', 'foto_problema', 'foto_galeria',
             'endereco_aproximado', 'status_atual', 'status_display', 'criado_em',
-            'historico', 'latitude', 'longitude'
+            'historico', 'latitude', 'longitude', 'avaliacao', 'comentario_cidadao',
+            'e_propriedade_privada', 'comprovante_titularidade', 'aceite_termo_ambiental'
         ]
         # O cidadão não pode alterar o status ou a data de criação manualmente
         read_only_fields = ['status_atual', 'criado_em']
+
+    def validate(self, data):
+        """
+        Validações customizadas para o Relato.
+        """
+        # Se estiver tentando enviar avaliação/comentário
+        if 'avaliacao' in data or 'comentario_cidadao' in data:
+            # No caso de criação, obviamente não pode ter avaliação
+            if not self.instance:
+                raise serializers.ValidationError(
+                    {"avaliacao": "Você não pode avaliar um chamado que ainda não foi criado."}
+                )
+            
+            # No caso de atualização, só pode se o status for resolvido
+            if self.instance.status_atual != 'resolvido':
+                raise serializers.ValidationError(
+                    {"avaliacao": "A avaliação só é permitida após a resolução do chamado pela prefeitura."}
+                )
+        
+        return data
 
     def create(self, validated_data):
         # Pega o usuário logado automaticamente da requisição

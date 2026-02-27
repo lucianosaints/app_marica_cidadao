@@ -1,0 +1,426 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    :root {
+        --primary: #3498db;
+        --success: #2ecc71;
+        --warning: #f39c12;
+        --danger: #e74c3c;
+        --dark: #2c3e50;
+        --light: #f4f6f9;
+        --glass: rgba(255, 255, 255, 0.8);
+    }
+
+    body {
+        background-color: #f4f7f6;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .dashboard-container {
+        padding: 20px;
+    }
+
+    .kpi-card {
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+        margin-bottom: 20px;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .kpi-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-card .card-body {
+        padding: 25px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .kpi-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        color: white;
+    }
+
+    .kpi-info h3 {
+        margin: 0;
+        font-weight: 700;
+        font-size: 2rem;
+        color: var(--dark);
+    }
+
+    .kpi-info p {
+        margin: 0;
+        color: #7f8c8d;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
+    }
+
+    .chart-card {
+        border: none;
+        border-radius: 15px;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        margin-bottom: 30px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chart-card .card-header {
+        background: transparent;
+        border-bottom: 1px solid #eee;
+        padding: 15px 20px;
+    }
+
+    .chart-card .card-title {
+        font-weight: 600;
+        color: var(--dark);
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .chart-card .card-body {
+        padding: 20px;
+        position: relative;
+        min-height: 300px;
+        /* Garante altura mínima para o canvas */
+    }
+
+    /* Gradients for icons */
+    .bg-grad-blue {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+    }
+
+    .bg-grad-green {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+    }
+
+    .bg-grad-orange {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+
+    .bg-grad-purple {
+        background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="row">
+        <div class="col-12 mb-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0 text-gray-800">📊 Central de Inteligência Urbana - Maricá</h1>
+                <p class="text-muted small mb-0">Monitoramento em tempo real da zeladoria citadina</p>
+            </div>
+            <div class="text-right">
+                <span class="badge badge-info p-2">LIVE</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Total de Relatos</p>
+                        <h3>{{ total_relatos }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-blue">
+                        <i class="fas fa-bullhorn"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Resolvidos</p>
+                        <h3>{{ resolvidos }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-green">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Em Andamento</p>
+                        <h3>{{ em_andamento }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-purple">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Pendentes / Novos</p>
+                        <h3>{{ pendentes }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-orange">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- Evolução Temporal -->
+        <div class="col-lg-8">
+            <div class="chart-card">
+                <div class="card-header">
+                    <h5 class="card-title">Evolução dos Relatos (Últimos 30 Dias)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="evolucaoChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Distribuição por Status -->
+        <div class="col-lg-4">
+            <div class="chart-card">
+                <div class="card-header">
+                    <h5 class="card-title">Status dos Chamados</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <!-- Mapa de Calor -->
+        <div class="col-lg-12">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title">Mapa de Calor Urbana (Densidade de Incidentes)</h5>
+                    <span class="badge badge-warning">GEO-INTELIGÊNCIA</span>
+                </div>
+                <div class="card-body">
+                    <div id="heatmap" style="width: 100%; height: 500px; border-radius: 10px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-2">
+        <!-- Top Categorias -->
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="card-header">
+                    <h5 class="card-title">Volume por Categoria de Problema</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="categoriaChart" style="height: 250px!important;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Cores suaves e profissionais
+        const colors = {
+            blue: '#3498db',
+            green: '#2ecc71',
+            purple: '#9b59b6',
+            orange: '#f39c12',
+            red: '#e74c3c',
+            gray: '#95a5a6'
+        };
+
+        try {
+            // 1. Gráfico de Evolução (Linha)
+            const evolData = JSON.parse('{{ evolucao_stats_json|safe }}');
+            if (evolData.length > 0) {
+                new Chart(document.getElementById('evolucaoChart'), {
+                    type: 'line',
+                    data: {
+                        labels: evolData.map(d => d.data),
+                        datasets: [{
+                            label: 'Novos Relatos',
+                            data: evolData.map(d => d.total),
+                            borderColor: colors.blue,
+                            backgroundColor: 'rgba(52, 152, 219, 0.05)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { stepSize: 1, font: { family: 'Inter' } } },
+                            x: { grid: { display: false }, ticks: { font: { family: 'Inter' } } }
+                        }
+                    }
+                });
+            }
+
+            // 2. Gráfico de Status (Doughnut)
+            const statusRaw = JSON.parse('{{ status_stats_json|safe }}');
+            if (statusRaw.length > 0) {
+                const statusLabelsMap = {
+                    'recebido': 'Pendente',
+                    'em_progresso': 'Em Execução',
+                    'resolvido': 'Resolvido',
+                    'arquivado': 'Arquivado'
+                };
+                const statusColorsMap = {
+                    'recebido': '#f1c40f', // Amarelo Premium
+                    'em_progresso': '#9b59b6', // Roxo
+                    'resolvido': '#2ecc71', // Verde
+                    'arquivado': '#95a5a6'  // Cinza
+                };
+
+                new Chart(document.getElementById('statusChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: statusRaw.map(s => statusLabelsMap[s.status_atual] || s.status_atual),
+                        datasets: [{
+                            data: statusRaw.map(s => s.total),
+                            backgroundColor: statusRaw.map(s => statusColorsMap[s.status_atual] || colors.blue),
+                            borderWidth: 0,
+                            hoverOffset: 15
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '75%',
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, font: { family: 'Inter', size: 11 } } }
+                        }
+                    }
+                });
+            }
+
+            // 3. Mapa de Calor (Heatmap) + Marcadores
+            const heatmapPoints = JSON.parse('{{ heatmap_data_json|safe }}');
+            console.log("Pontos carregados no mapa:", heatmapPoints);
+
+            if (heatmapPoints.length > 0) {
+                // Inicializa o mapa centralizado em Maricá por padrão
+                var map = L.map('heatmap').setView([-22.919, -42.818], 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(map);
+
+                const heatPoints = [];
+                const markerCoords = [];
+
+                heatmapPoints.forEach(p => {
+                    const lat = parseFloat(p.latitude);
+                    const lng = parseFloat(p.longitude);
+
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        // USA CIRCLEMARKER (Mais robusto que marcador de imagem)
+                        L.circleMarker([lat, lng], {
+                            radius: 8,
+                            fillColor: "#e74c3c", // Vermelho forte
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map)
+                            .bindPopup(`<b>Ocorrência</b><br>Lat: ${lat}<br>Long: ${lng}`);
+
+                        markerCoords.push([lat, lng]);
+                        heatPoints.push([lat, lng, 0.8]);
+                    }
+                });
+
+                // Tenta ajustar o zoom para englobar todos os pontos encontrados
+                if (markerCoords.length > 0) {
+                    const bounds = L.latLngBounds(markerCoords);
+                    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+                }
+
+                // Inicializa Camada de Calor
+                if (typeof L.heatLayer === 'function') {
+                    L.heatLayer(heatPoints, {
+                        radius: 40,
+                        blur: 15,
+                        maxZoom: 15,
+                        max: 1.0,
+                        gradient: { 0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1: 'red' }
+                    }).addTo(map);
+                }
+            } else {
+                console.warn("Nenhum ponto de geolocalização encontrado para o mapa.");
+            }
+
+            // 4. Gráfico de Categorias (Barras Horizontais)
+            const catData = JSON.parse('{{ categoria_stats_json|safe }}');
+            if (catData.length > 0) {
+                new Chart(document.getElementById('categoriaChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: catData.map(c => c.categoria__nome || 'Sem categoria'),
+                        datasets: [{
+                            label: 'Quantidade',
+                            data: catData.map(c => c.total),
+                            backgroundColor: colors.blue + '80',
+                            borderColor: colors.blue,
+                            borderWidth: 1,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                            y: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        } catch (e) {
+            console.error("Erro ao inicializar gráficos:", e);
+        }
+    });
+</script>
+{% endblock %}

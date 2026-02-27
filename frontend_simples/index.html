@@ -12,6 +12,19 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="mobile-web-app-capable" content="yes">
 
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/logo/pwa_icon_512.jpg">
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrado!', reg))
+          .catch(err => console.log('Erro ao registrar SW:', err));
+      });
+    }
+  </script>
+
   <!-- Leaflet Maps CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
@@ -198,13 +211,20 @@
       const [descricao, setDescricao] = useState('');
       const [localizacao, setLocalizacao] = useState({ lat: -22.9194, lng: -42.8186 }); // Maricá por padrão
       const [foto, setFoto] = useState(null);
+      const [fotoGaleria, setFotoGaleria] = useState(null);
       const [previewUrl, setPreviewUrl] = useState(null);
+      const [previewGaleriaUrl, setPreviewGaleriaUrl] = useState(null);
       const [categoria, setCategoria] = useState('');
       const [enderecoAproximado, setEnderecoAproximado] = useState('');
       const [statusEnvio, setStatusEnvio] = useState('');
       const [isCapturandoGps, setIsCapturandoGps] = useState(false);
+      const [isAnalisandoIa, setIsAnalisandoIa] = useState(false);
+      const [sugestaoIa, setSugestaoIa] = useState(null);
       const [localizacaoConfirmada, setLocalizacaoConfirmada] = useState(false);
       const [listaCategorias, setListaCategorias] = useState([]);
+      const [ePropriedadePrivada, setEPropriedadePrivada] = useState(false);
+      const [comprovante, setComprovante] = useState(null);
+      const [aceiteTermoAmbiental, setAceiteTermoAmbiental] = useState(false);
 
       const mapRef = React.useRef(null);
       const markerRef = React.useRef(null);
@@ -282,8 +302,40 @@
             { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
           );
         } else {
-          setStatusEnvio('⚠️ Geolocalização não suportada.');
+          setStatusEnvio('⚠️ Geolocalização não suportada no seu navegador.');
           setIsCapturandoGps(false);
+        }
+      };
+
+      const analisarFotoComIA = async (arquivo) => {
+        setIsAnalisandoIa(true);
+        setStatusEnvio('🤖 IA Analisando imagem...');
+
+        const formData = new FormData();
+        formData.append('foto_problema', arquivo);
+
+        try {
+          const resposta = await fetch('/api/analisar-foto/', {
+            method: 'POST',
+            headers: { 'Authorization': `Token ${token}` },
+            body: formData
+          });
+
+          if (resposta.ok) {
+            const data = await resposta.json();
+            if (data.categoria_id) {
+              setCategoria(data.categoria_id.toString());
+              setSugestaoIa(data);
+              setStatusEnvio(`🤖 IA: Identificamos um "${data.justificativa}". Categoria ajustada!`);
+            } else {
+              setStatusEnvio('🤖 IA: Não consegui identificar a categoria automaticamente. Por favor, selecione manualmente.');
+            }
+          }
+        } catch (err) {
+          console.error("Erro na análise de IA:", err);
+          setStatusEnvio('⚠️ Falha ao conectar com o serviço de IA.');
+        } finally {
+          setIsAnalisandoIa(false);
         }
       };
 
@@ -304,6 +356,12 @@
         formData.append('latitude', parseFloat(localizacao.lat));
         formData.append('longitude', parseFloat(localizacao.lng));
         formData.append('foto_problema', foto);
+        formData.append('foto_galeria', fotoGaleria);
+        formData.append('e_propriedade_privada', ePropriedadePrivada);
+        if (ePropriedadePrivada) {
+          if (comprovante) formData.append('comprovante_titularidade', comprovante);
+          formData.append('aceite_termo_ambiental', aceiteTermoAmbiental);
+        }
 
         try {
           const resposta = await fetch('/api/relatos/', {
@@ -319,8 +377,13 @@
             setDescricao('');
             setEnderecoAproximado('');
             setFoto(null);
+            setFotoGaleria(null);
             setPreviewUrl(null);
+            setPreviewGaleriaUrl(null);
             setCategoria('');
+            setEPropriedadePrivada(false);
+            setComprovante(null);
+            setAceiteTermoAmbiental(false);
             if (onSuccess) onSuccess();
           } else {
             const erroData = await resposta.json();
@@ -381,7 +444,9 @@
                 >
                   <option value="">Selecione uma categoria...</option>
                   {listaCategorias.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                    <option key={cat.id} value={cat.id}>
+                      {cat.emoji ? `${cat.emoji} ${cat.nome}` : cat.nome}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -408,24 +473,99 @@
                 />
               </div>
 
+              {/* Seção Propriedade Privada */}
+              <div style={{ backgroundColor: '#fff5f5', padding: '15px', borderRadius: '12px', border: '1px solid #fed7d7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <input
+                    type="checkbox"
+                    id="e_propriedade_privada"
+                    checked={ePropriedadePrivada}
+                    onChange={(e) => setEPropriedadePrivada(e.target.checked)}
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                  <label htmlFor="e_propriedade_privada" style={{ marginBottom: 0, color: '#c53030' }}>
+                    O problema é em uma <strong>Propriedade Privada</strong>?
+                  </label>
+                </div>
+
+                {ePropriedadePrivada && (
+                  <div style={{ marginTop: '10px', borderTop: '1px solid #feb2b2', paddingTop: '10px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 'bold' }}>
+                      📄 Anexar Comprovante de Titularidade:
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,image/*"
+                      onChange={(e) => setComprovante(e.target.files[0])}
+                      required={ePropriedadePrivada}
+                      style={{ fontSize: '12px', marginBottom: '0' }}
+                    />
+                    <p style={{ fontSize: '10px', color: '#e53e3e', marginTop: '5px' }}>
+                      * Obrigatório para serviços em locais particulares (ex: poda interna).
+                    </p>
+
+                    <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#fffaf0', borderRadius: '8px', border: '1px solid #feebc8', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                      <input
+                        type="checkbox"
+                        id="aceite_termo_ambiental"
+                        checked={aceiteTermoAmbiental}
+                        onChange={(e) => setAceiteTermoAmbiental(e.target.checked)}
+                        required={ePropriedadePrivada}
+                        style={{ width: '18px', height: '18px', marginTop: '3px' }}
+                      />
+                      <label htmlFor="aceite_termo_ambiental" style={{ fontSize: '12px', color: '#7b341e', fontWeight: '500', lineHeight: '1.4', margin: 0 }}>
+                        Estou ciente que a realização de cortes em áreas particulares é passível de <strong>compensação ambiental</strong> conforme disposto na <strong>Lei Municipal n. 2367/2011</strong>.
+                      </label>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
                 <div style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📸 Foto do Local:</label>
                   <input
                     type="file"
                     accept="image/*"
+                    capture="environment"
                     onChange={(e) => {
                       const file = e.target.files[0];
                       setFoto(file);
                       if (file) {
                         const url = URL.createObjectURL(file);
                         setPreviewUrl(url);
+                        analisarFotoComIA(file);
                       }
                     }}
                     style={{ fontSize: '12px', marginBottom: '10px', width: '100%' }}
                     required
                   />
+                  {isAnalisandoIa && <div style={{ fontSize: '11px', color: '#3498db', fontWeight: 'bold', textAlign: 'center', marginBottom: '10px' }}>⚡ IA Processando imagem...</div>}
                   {previewUrl && <img src={previewUrl} className="preview-foto" alt="Preview" />}
+                  {sugestaoIa && (
+                    <div style={{ marginTop: '10px', padding: '8px', backgroundColor: '#ebf8ff', borderRadius: '6px', border: '1px solid #90cdf4', fontSize: '11px' }}>
+                      <strong>🤖 Sugestão da IA:</strong> {sugestaoIa.justificativa} ({sugestaoIa.confianca}% de confiança)
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0' }}>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🖼️ Foto da Galeria:</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      setFotoGaleria(file);
+                      if (file) {
+                        const url = URL.createObjectURL(file);
+                        setPreviewGaleriaUrl(url);
+                      }
+                    }}
+                    style={{ fontSize: '12px', marginBottom: '10px', width: '100%' }}
+                  />
+                  {previewGaleriaUrl && <img src={previewGaleriaUrl} className="preview-foto" alt="Preview Galeria" />}
+                  <p style={{ fontSize: '10px', color: '#7f8c8d' }}>Use esta opção para enviar fotos que já estão no seu celular.</p>
                 </div>
                 <div style={{ textAlign: 'center', backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🛰️ Localização GPS:</label>
@@ -727,6 +867,31 @@
       const [relatos, setRelatos] = useState([]);
       const [carregando, setCarregando] = useState(true);
       const [erro, setErro] = useState('');
+      const [deferredPrompt, setDeferredPrompt] = useState(null);
+      const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+      React.useEffect(() => {
+        window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          setDeferredPrompt(e);
+          setShowInstallBtn(true);
+        });
+
+        window.addEventListener('appinstalled', () => {
+          setShowInstallBtn(false);
+          setDeferredPrompt(null);
+        });
+      }, []);
+
+      const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setShowInstallBtn(false);
+        }
+        setDeferredPrompt(null);
+      };
 
       React.useEffect(() => {
         const carregarRelatos = async () => {
@@ -790,6 +955,22 @@
               <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '26px' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {showInstallBtn && (
+                <button
+                  onClick={handleInstallClick}
+                  style={{
+                    width: 'auto',
+                    backgroundColor: '#27ae60',
+                    padding: '5px 12px',
+                    fontSize: '11px',
+                    borderRadius: '15px',
+                    marginRight: '5px',
+                    boxShadow: '0 2px 4px rgba(39, 174, 96, 0.3)'
+                  }}
+                >
+                  📲 Instalar App
+                </button>
+              )}
               <span style={{ fontWeight: '700', color: '#2c3e50', fontSize: '12px' }}>Olá, {username || 'Cidadão'}</span>
               <button
                 type="button"
@@ -907,7 +1088,9 @@
                     }}>
                       #{relato.id}
                     </span>
-                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>{relato.categoria_nome}</h3>
+                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>
+                      {relato.categoria_emoji} {relato.categoria_nome}
+                    </h3>
                     <div style={{ marginTop: '5px', color: '#95a5a6', fontSize: '13px' }}>
                       📅 Aberto em {new Date(relato.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </div>
@@ -930,6 +1113,49 @@
                 <div style={{ color: '#2f3542', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
                   {relato.descricao}
                 </div>
+
+                {relato.status_atual === 'resolvido' && !relato.avaliacao && (
+                  <div style={{ backgroundColor: '#fff9db', padding: '15px', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffe066' }}>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#856404' }}>⭐ Como foi o atendimento?</h4>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                      {[1, 2, 3, 4, 5].map(estrela => (
+                        <span
+                          key={estrela}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const comentario = prompt('Deixe um breve comentário (opcional):');
+                            (async () => {
+                              try {
+                                await fetch(`/api/relatos/${relato.id}/`, {
+                                  method: 'PATCH',
+                                  headers: {
+                                    'Authorization': `Token ${token}`,
+                                    'Content-Type': 'application/json'
+                                  },
+                                  body: JSON.stringify({ avaliacao: estrela, comentario_cidadao: comentario })
+                                });
+                                alert('Obrigado pelo seu feedback! ⭐');
+                                window.location.reload();
+                              } catch (err) {
+                                alert('Erro ao enviar avaliação.');
+                              }
+                            })();
+                          }}
+                          style={{ fontSize: '24px', cursor: 'pointer', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.1))' }}
+                        >
+                          ⭐
+                        </span>
+                      ))}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#856404' }}>Sua avaliação ajuda a melhorar Maricá.</p>
+                  </div>
+                )}
+
+                {relato.avaliacao && (
+                  <div style={{ marginBottom: '15px', fontSize: '13px', color: '#2ecc71', fontWeight: 'bold' }}>
+                    Sua avaliação: {'⭐'.repeat(relato.avaliacao)}
+                  </div>
+                )}
 
                 {relato.historico && relato.historico.length > 0 ? (
                   <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px dashed #dcdde1' }}>

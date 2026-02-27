@@ -9,6 +9,7 @@ class CategoriaProblema(models.Model):
     nome = models.CharField(max_length=100)
     descricao = models.TextField(blank=True, null=True)
     icone = models.ImageField(upload_to='icones_categorias/', blank=True, null=True)
+    emoji = models.CharField(max_length=10, blank=True, null=True, help_text="Emoji para exibição no formulário")
     tempo_estimado_resolucao = models.IntegerField(
         help_text="Tempo estimado para resolução em dias"
     )
@@ -34,16 +35,26 @@ class RelatoZeladoria(models.Model):
     
     # Dados do problema
     descricao = models.TextField(help_text="Descrição detalhada do cidadão")
-    foto_problema = models.ImageField(upload_to='relatos_cidadao/')
+    foto_problema = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto tirada na hora (Câmera)")
+    foto_galeria = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto enviada da galeria")
     
     # Geolocalização
     latitude = models.FloatField(help_text="Latitude", null=True, blank=True)
     longitude = models.FloatField(help_text="Longitude", null=True, blank=True)
     endereco_aproximado = models.CharField(max_length=255, blank=True, null=True)
     
+    # Propriedade Privada
+    e_propriedade_privada = models.BooleanField(default=False, help_text="O problema é em uma propriedade privada?")
+    comprovante_titularidade = models.FileField(upload_to='comprovantes_relatos/', blank=True, null=True, help_text="Necessário se for propriedade privada")
+    aceite_termo_ambiental = models.BooleanField(default=False, help_text="Ciente da compensação ambiental conforme Lei 2367/2011")
+    
     # Controle de estado
     status_atual = models.CharField(max_length=20, choices=STATUS_CHOICES, default='recebido')
     
+    # Feedback do Cidadão (Pós-Resolução)
+    avaliacao = models.IntegerField(null=True, blank=True, help_text="Avaliação de 1 a 5 estrelas")
+    comentario_cidadao = models.TextField(null=True, blank=True, help_text="Comentário do cidadão sobre a resolução")
+
     # Timestamps
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import os
+import json
 from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import RelatoZeladoria, CategoriaProblema
@@ -12,6 +13,9 @@ from .serializers import (
     UserRegistrationSerializer, 
     CategoriaProblemaSerializer
 )
+from .ai_service import analisar_imagem_problema
+import tempfile
+
 
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
@@ -112,3 +116,88 @@ def frontend_view(request):
         return HttpResponse(content, content_type='text/html')
     except FileNotFoundError:
         return HttpResponse("Frontend index.html não encontrado.", status=404)
+
+from rest_framework.views import APIView
+class APIAnalisarFoto(APIView):
+    """
+    Recebe uma foto e retorna o palpite da IA sobre a categoria.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [authentication.TokenAuthentication]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        foto = request.FILES.get('foto_problema')
+        if not foto:
+            return Response({"error": "Nenhuma foto enviada."}, status=400)
+
+        # Salva temporariamente para processar
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg", mode='wb') as tmp:
+            for chunk in foto.chunks():
+                tmp.write(chunk)
+            temp_path = tmp.name
+
+        try:
+            resultado = analisar_imagem_problema(temp_path)
+            # Remove o arquivo temporário
+            os.remove(temp_path)
+            return Response(resultado)
+        except Exception as e:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return Response({"error": str(e)}, status=500)
+
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from datetime import timedelta
+from django.views.generic import TemplateView
+from django.contrib.admin.views.decorators import staff_member_required
+from django.utils.decorators import method_decorator
+
+@method_decorator(staff_member_required, name='dispatch')
+class DashboardAdminView(TemplateView):
+    template_name = 'admin/dashboard_stats.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 1. Estatísticas de Status
+        status_stats = RelatoZeladoria.objects.values('status_atual').annotate(total=Count('id'))
+        
+        # 2. Estatísticas de Categoria
+        categoria_stats = RelatoZeladoria.objects.values('categoria__nome').annotate(total=Count('id')).order_by('-total')
+        
+        # 3. Evolução dos últimos 30 dias
+        trinta_dias_atras = timezone.now() - timedelta(days=30)
+        evolucao_stats = RelatoZeladoria.objects.filter(
+            criado_em__gte=trinta_dias_atras
+        ).annotate(
+            data=TruncDate('criado_em')
+        ).values('data').annotate(
+            total=Count('id')
+        ).order_by('data')
+
+        # 4. Formatação para o Chart.js (JSON Seguro)
+        context['status_stats_json'] = json.dumps(list(status_stats))
+        context['categoria_stats_json'] = json.dumps(list(categoria_stats))
+        context['evolucao_stats_json'] = json.dumps([
+            {'data': item['data'].strftime('%d/%m'), 'total': item['total']} 
+            for item in evolucao_stats
+        ])
+        
+        # 5. Geocalização para Heatmap
+        coordenadas = RelatoZeladoria.objects.exclude(
+            latitude__isnull=True
+        ).exclude(
+            longitude__isnull=True
+        ).values('latitude', 'longitude')
+        context['heatmap_data_json'] = json.dumps(list(coordenadas))
+        
+        # 6. KPIs (Indicadores Chave)
+        context['total_relatos'] = RelatoZeladoria.objects.count()
+        context['resolvidos'] = RelatoZeladoria.objects.filter(status_atual='resolvido').count()
+        context['pendentes'] = RelatoZeladoria.objects.filter(status_atual='recebido').count()
+        context['em_andamento'] = RelatoZeladoria.objects.filter(status_atual='em_progresso').count()
+        
+        return context
