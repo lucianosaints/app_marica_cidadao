@@ -1279,13 +1279,13 @@
           {/* Header Superior Premium */}
           <div className="glass-card" style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '15px 20px', borderRadius: '20px', boxShadow: '0 8px 32px var(--card-shadow)',
-            marginBottom: '20px', marginTop: '10px', width: '100%', boxSizing: 'border-box'
+            padding: '10px 15px', borderRadius: '18px', boxShadow: '0 8px 32px var(--card-shadow)',
+            marginBottom: '15px', marginTop: '5px', width: '100%', boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '30px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
-              <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)' }}></div>
-              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '28px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '24px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
+              <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border-color)' }}></div>
+              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '22px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '5px' }}>
@@ -1298,9 +1298,8 @@
                   {isOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Cidadão</div>
-                <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>{username || 'Usuário'}</div>
+              <div style={{ textAlign: 'right', minWidth: '0' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '80px' }}>{username.split(' ')[0] || 'Usuário'}</div>
               </div>
               <button onClick={onLogout} style={{
                   backgroundColor: 'rgba(232, 65, 24, 0.1)', color: '#e84118', width: '35px', height: '35px',
@@ -1312,12 +1311,12 @@
 
           {/* Banner Principal */}
           <div className="glass-card" style={{
-            padding: '35px 25px', borderRadius: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
-            marginBottom: '25px', textAlign: 'center', background: 'linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%)',
+            padding: '25px 20px', borderRadius: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
+            marginBottom: '20px', textAlign: 'center', background: 'linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%)',
             position: 'relative', overflow: 'hidden'
           }}>
-            <h1 style={{ color: '#2d3436', margin: '0 0 8px 0', fontSize: '26px', fontWeight: '800' }}>Central de Zeladoria</h1>
-            <p style={{ color: '#636e72', marginBottom: '30px', fontSize: '16px' }}>Ajude a tornar Maricá cada vez melhor.</p>
+            <h1 style={{ color: '#2d3436', margin: '0 0 5px 0', fontSize: '22px', fontWeight: '800' }}>Central de Zeladoria</h1>
+            <p style={{ color: '#636e72', marginBottom: '20px', fontSize: '14px' }}>Ajude a tornar Maricá cada vez melhor.</p>
             <button onClick={() => onChangeView('novo')} style={{
                 width: '100%', padding: '20px', fontSize: '18px', fontWeight: '800',
                 backgroundColor: '#3498db', backgroundImage: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
@@ -1334,10 +1333,10 @@
               { label: 'Abertos', value: stats.em_andamento, color: '#f39c12', icon: '🕒' },
               { label: 'Ok', value: stats.resolvidos, color: '#2ecc71', icon: '✅' }
             ].map((s, idx) => (
-              <div key={idx} className="stat-card" style={{ background: 'white', padding: '15px 5px', borderRadius: '18px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
-                <div style={{ fontSize: '18px', marginBottom: '5px' }}>{s.icon}</div>
-                <div style={{ fontSize: '22px', fontWeight: '800', color: s.color }}>{s.value}</div>
-                <div style={{ color: '#b2bec3', fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>{s.label}</div>
+              <div key={idx} className="stat-card" style={{ background: 'white', padding: '10px 5px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+                <div style={{ fontSize: '16px', marginBottom: '2px' }}>{s.icon}</div>
+                <div style={{ fontSize: '18px', fontWeight: '800', color: s.color }}>{s.value}</div>
+                <div style={{ color: '#b2bec3', fontSize: '9px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>{s.label}</div>
               </div>
             ))}
           </div>
