@@ -19,13 +19,40 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
+import json
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from datetime import timedelta
 
 from django.views.generic import RedirectView, TemplateView
 from app_marica_cidadao.views import CustomObtainAuthToken, frontend_view
+from app_marica_cidadao.models import RelatoZeladoria
 
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
+# Configurações de Título do Admin (Removendo "Administração")
+admin.site.site_header = "Maricá Cidadão"
+admin.site.site_title = "Maricá Cidadão"
+admin.site.index_title = "Central de Gestão"
+admin.site.index_template = "admin/custom_index.html"
+
+# Sobrescrita da View de Index do Admin para injetar o contexto do Dashboard Premium
+def custom_admin_index(request, extra_context=None):
+    from django.contrib.admin.sites import site
+    from app_marica_cidadao.utils import get_dashboard_stats
+    
+    extra_context = extra_context or {}
+    bairro_selecionado = request.GET.get('bairro', '')
+    
+    # Obtém as estatísticas consolidadas via utilitário
+    stats = get_dashboard_stats(bairro_selecionado)
+    extra_context.update(stats)
+
+    return site.index(request, extra_context=extra_context)
+
 urlpatterns = [
+    path('admin/', custom_admin_index, name='custom_admin_index'),
     path('admin/', admin.site.urls),
     path('', frontend_view, name='home'),
     path('api/login/', CustomObtainAuthToken.as_view(), name='api_token_auth'),

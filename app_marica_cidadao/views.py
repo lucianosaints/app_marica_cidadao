@@ -1,34 +1,59 @@
 from django.shortcuts import render
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import os
 import json
+import io
+import unicodedata
 from rest_framework import viewsets, permissions, authentication, generics
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import RelatoZeladoria, CategoriaProblema
+from rest_framework.views import APIView
+from rest_framework.authtoken.views import ObtainAuthToken
+from rest_framework.authtoken.models import Token
+from rest_framework.response import Response
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from datetime import timedelta
+from django.views.generic import TemplateView
+from django.contrib.admin.views.decorators import staff_member_required
+import tempfile
+from fpdf import FPDF
+
+from .models import RelatoZeladoria, CategoriaProblema, WebPushSubscription
 from .serializers import (
     RelatoZeladoriaSerializer, 
     UserRegistrationSerializer, 
     CategoriaProblemaSerializer
 )
 from .ai_service import analisar_imagem_problema
-import tempfile
 
-
-from rest_framework.authtoken.views import ObtainAuthToken
-from rest_framework.authtoken.models import Token
-from rest_framework.response import Response
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
+def normalizar_texto(texto):
+    """
+    Remove acentos e caracteres especiais para garantir compatibilidade com fontes PDF padrão (Latin-1).
+    """
+    if not texto:
+        return ""
+    # Remove acentos
+    nfkd_form = unicodedata.normalize('NFKD', str(texto))
+    texto_sem_acento = "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+    return texto_sem_acento.encode('ascii', 'ignore').decode('ascii')
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CustomObtainAuthToken(ObtainAuthToken):
     authentication_classes = []  # Evita CSRF check
     def post(self, request, *args, **kwargs):
-        username_input = request.data.get('username')
-        password = request.data.get('password')
+        username_input = request.data.get('username', '')
+        if username_input:
+            username_input = username_input.strip()
+            
+        password = request.data.get('password', '')
+        
+        print(f"--- TENTATIVA DE LOGIN --- Usuário: '{username_input}' ---")
 
         # 1. Tenta autenticar pelo username (padrão)
         user = authenticate(username=username_input, password=password)
@@ -117,7 +142,6 @@ def frontend_view(request):
     except FileNotFoundError:
         return HttpResponse("Frontend index.html não encontrado.", status=404)
 
-from rest_framework.views import APIView
 class APIAnalisarFoto(APIView):
     """
     Recebe uma foto e retorna o palpite da IA sobre a categoria.
@@ -147,57 +171,191 @@ class APIAnalisarFoto(APIView):
                 os.remove(temp_path)
             return Response({"error": str(e)}, status=500)
 
-from django.db.models import Count
-from django.db.models.functions import TruncDate
-from django.utils import timezone
-from datetime import timedelta
-from django.views.generic import TemplateView
-from django.contrib.admin.views.decorators import staff_member_required
-from django.utils.decorators import method_decorator
+class APILogoutView(APIView):
+    """
+    Invalida o token do usuário no servidor (Logout real).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [authentication.TokenAuthentication]
+
+    def post(self, request):
+        try:
+            # Deleta o token associado ao usuário
+            request.user.auth_token.delete()
+            return Response({"success": "Sessão encerrada com sucesso no servidor."}, status=200)
+        except Exception as e:
+            return Response({"error": f"Erro ao encerrar sessão: {str(e)}"}, status=500)
+
+class PublicRelatosView(APIView):
+    """
+    Endpoint público para transparência social.
+    Retorna dados anônimos dos relatos para exibir no mapa da cidade.
+    """
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        relatos = RelatoZeladoria.objects.all().select_related('categoria')
+        data = []
+        for r in relatos:
+            data.append({
+                "id": r.id,
+                "categoria_nome": r.categoria.nome,
+                "categoria_emoji": r.categoria.emoji,
+                "status_display": r.get_status_atual_display(),
+                "bairro": r.bairro,
+                "latitude": r.latitude,
+                "longitude": r.longitude,
+                "criado_em": r.criado_em.strftime('%d/%m/%Y'),
+                "prioridade": r.prioridade
+            })
+        return Response(data)
 
 @method_decorator(staff_member_required, name='dispatch')
 class DashboardAdminView(TemplateView):
     template_name = 'admin/dashboard_stats.html'
 
     def get_context_data(self, **kwargs):
+        from .utils import get_dashboard_stats
         context = super().get_context_data(**kwargs)
         
-        # 1. Estatísticas de Status
-        status_stats = RelatoZeladoria.objects.values('status_atual').annotate(total=Count('id'))
+        bairro_selecionado = self.request.GET.get('bairro', '')
         
-        # 2. Estatísticas de Categoria
-        categoria_stats = RelatoZeladoria.objects.values('categoria__nome').annotate(total=Count('id')).order_by('-total')
-        
-        # 3. Evolução dos últimos 30 dias
-        trinta_dias_atras = timezone.now() - timedelta(days=30)
-        evolucao_stats = RelatoZeladoria.objects.filter(
-            criado_em__gte=trinta_dias_atras
-        ).annotate(
-            data=TruncDate('criado_em')
-        ).values('data').annotate(
-            total=Count('id')
-        ).order_by('data')
-
-        # 4. Formatação para o Chart.js (JSON Seguro)
-        context['status_stats_json'] = json.dumps(list(status_stats))
-        context['categoria_stats_json'] = json.dumps(list(categoria_stats))
-        context['evolucao_stats_json'] = json.dumps([
-            {'data': item['data'].strftime('%d/%m'), 'total': item['total']} 
-            for item in evolucao_stats
-        ])
-        
-        # 5. Geocalização para Heatmap
-        coordenadas = RelatoZeladoria.objects.exclude(
-            latitude__isnull=True
-        ).exclude(
-            longitude__isnull=True
-        ).values('latitude', 'longitude')
-        context['heatmap_data_json'] = json.dumps(list(coordenadas))
-        
-        # 6. KPIs (Indicadores Chave)
-        context['total_relatos'] = RelatoZeladoria.objects.count()
-        context['resolvidos'] = RelatoZeladoria.objects.filter(status_atual='resolvido').count()
-        context['pendentes'] = RelatoZeladoria.objects.filter(status_atual='recebido').count()
-        context['em_andamento'] = RelatoZeladoria.objects.filter(status_atual='em_progresso').count()
+        # Obtém as estatísticas consolidadas via utilitário
+        stats = get_dashboard_stats(bairro_selecionado)
+        context.update(stats)
         
         return context
+
+class ExportarRelatorioPDFView(APIView):
+    """
+    Gera um relatório PDF profissional para gestão pública.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            # 1. Coleta de Dados
+            total = RelatoZeladoria.objects.count()
+            resolvidos = RelatoZeladoria.objects.filter(status_atual='resolvido').count()
+            pendentes = RelatoZeladoria.objects.filter(status_atual='recebido').count()
+            relatos_recentes = RelatoZeladoria.objects.select_related('categoria').order_by('-criado_em')[:20]
+
+            # 2. Configuração do PDF
+            pdf = FPDF()
+            pdf.add_page()
+            
+            # Cabeçalho
+            pdf.set_font("helvetica", "B", 16)
+            pdf.cell(0, 10, normalizar_texto("PREFEITURA DE MARICA"), ln=True, align="C")
+            pdf.set_font("helvetica", "", 12)
+            pdf.cell(0, 10, normalizar_texto("Sistema Marica Cidadao - Relatorio de Gestao Urbana"), ln=True, align="C")
+            pdf.ln(5)
+            pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+            pdf.ln(10)
+
+            # Seção 1: Resumo Executivo
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, normalizar_texto("1. Resumo Executivo"), ln=True)
+            pdf.set_font("helvetica", "", 11)
+            pdf.cell(0, 8, normalizar_texto(f"- Total de Ocorrencias Registradas: {total}"), ln=True)
+            pdf.cell(0, 8, normalizar_texto(f"- Ocorrencias Solucionadas: {resolvidos}"), ln=True)
+            pdf.cell(0, 8, normalizar_texto(f"- Ocorrencias em Aberto: {pendentes}"), ln=True)
+            pdf.ln(10)
+
+            # Seção 2: Tabela de Ocorrências Recentes
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, normalizar_texto("2. Ultimas 20 Ocorrencias"), ln=True)
+            pdf.ln(5)
+
+            # Cabeçalho da Tabela
+            pdf.set_font("helvetica", "B", 10)
+            pdf.set_fill_color(240, 240, 240)
+            pdf.cell(20, 10, normalizar_texto("ID"), 1, 0, "C", True)
+            pdf.cell(60, 10, normalizar_texto("Categoria"), 1, 0, "C", True)
+            pdf.cell(40, 10, normalizar_texto("Status"), 1, 0, "C", True)
+            pdf.cell(40, 10, normalizar_texto("Data"), 1, 0, "C", True)
+            pdf.cell(30, 10, normalizar_texto("Prioridade"), 1, 1, "C", True)
+
+            # Dados da Tabela
+            pdf.set_font("helvetica", "", 9)
+            for r in relatos_recentes:
+                pdf.cell(20, 8, normalizar_texto(f"#{r.id}"), 1, 0, "C")
+                nome_cat = r.categoria.nome[:30] if r.categoria else "Sem categoria"
+                pdf.cell(60, 8, normalizar_texto(nome_cat), 1, 0, "L")
+                pdf.cell(40, 8, normalizar_texto(r.get_status_atual_display()), 1, 0, "C")
+                pdf.cell(40, 8, r.criado_em.strftime('%d/%m/%Y'), 1, 0, "C")
+                prio = r.prioridade or "Normal"
+                pdf.cell(30, 8, normalizar_texto(str(prio)), 1, 1, "C")
+
+            # Rodapé
+            pdf.ln(20)
+            pdf.set_font("helvetica", "I", 8)
+            data_geracao = timezone.now().strftime('%d/%m/%Y as %H:%M:%S')
+            pdf.cell(0, 10, normalizar_texto(f"Relatorio gerado em {data_geracao} por sistema automatizado."), 0, 0, "C")
+
+            # 3. Retorno do Arquivo
+            # O fpdf2 retorna um bytearray(). O Django pode convertê-lo incorretamente.
+            # Garantimos que seja um objeto 'bytes' nativo.
+            pdf_content = bytes(pdf.output())
+            
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="relatorio_marica_gestao.pdf"'
+            response['Content-Length'] = len(pdf_content)
+            return response
+            
+        except Exception as e:
+            import traceback
+            print("=== ERRO NA GERAÇÃO DO PDF ===")
+            print(traceback.format_exc())
+            return HttpResponse(f"Erro ao gerar PDF: {str(e)}", status=500)
+
+
+class WebPushSubscribeView(APIView):
+    """
+    Recebe a inscrição WebPush do frontend (PWA) e salva no banco de dados.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [authentication.TokenAuthentication]
+
+    def post(self, request):
+        subscription_info = request.data
+        
+        endpoint = subscription_info.get('endpoint')
+        keys = subscription_info.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+
+        if not endpoint or not p256dh or not auth:
+            return Response(
+                {"error": "Inscrição inválida. 'endpoint', 'p256dh' e 'auth' são obrigatórios."},
+                status=400
+            )
+
+        # Usar update_or_create para evitar endpoints duplicados e atualizar caso a key mude
+        sub, created = WebPushSubscription.objects.update_or_create(
+            endpoint=endpoint,
+            defaults={
+                'user': request.user,
+                'p256dh': p256dh,
+                'auth': auth
+            }
+        )
+
+        acao = "criada" if created else "atualizada"
+        print(f"--- INSCRIÇÃO WEBPUSH {acao.upper()} para {request.user.username} ---")
+        return Response({"status": f"Inscrição {acao} com sucesso!"}, status=200)
+
+class VapidPublicKeyView(APIView):
+    """
+    Retorna a chave VAPID pública para o Service Worker do Frontend.
+    """
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        # Lê a chave diretamente do settings (vamos carregar do decouple)
+        vapid_pub = getattr(settings, 'VAPID_PUBLIC_KEY', None)
+        if not vapid_pub:
+            return Response({"error": "VAPID key não configurada no servidor."}, status=500)
+        return Response({"public_key": vapid_pub}, status=200)

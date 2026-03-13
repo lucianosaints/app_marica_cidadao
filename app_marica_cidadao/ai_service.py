@@ -1,4 +1,11 @@
-import google.generativeai as genai
+import sys
+try:
+    import google.generativeai as genai
+    HAS_GEMINI = True
+except Exception as e:
+    HAS_GEMINI = False
+    print(f"AVISO: Não foi possível importar google.generativeai. A IA estará desabilitada. Erro: {e}")
+
 from django.conf import settings
 from decouple import config
 import PIL.Image
@@ -11,6 +18,9 @@ def analisar_imagem_problema(image_path):
     """
     Usa o modelo Gemini 1.5 Flash para analisar a imagem e sugerir uma categoria.
     """
+    if not HAS_GEMINI:
+        return {"error": "Biblioteca Gemini não carregou. Verifique 'pip install google-generativeai'"}
+
     if not GEMINI_API_KEY:
         return {"error": "API Key do Gemini não configurada no .env"}
 
@@ -58,10 +68,16 @@ def analisar_imagem_problema(image_path):
         - Se o problema for de infraestrutura urbana mas não se encaixar de 1 a 5, use o ID 6 (Outros).
         - Se não for um problema de zeladoria urbana, retorne "categoria_id": null.
 
+        ESTIMATIVA DE PRIORIDADE:
+        - "alta": Risco iminente à vida, obstrução total de vias principais, grandes vazamentos, focos críticos de doenças.
+        - "media": Problemas que afetam a mobilidade ou segurança mas não são urgentes (ex: buraco em rua residencial, lâmpada queimada em local movimentado).
+        - "baixa": Problemas estéticos, lixo pequeno, ou situações que não oferecem risco imediato.
+
         Responda APENAS em formato JSON com os seguintes campos:
-        - "categoria_id": (ID numérico da categoria encontrada, ou null se não identificar)
+        - "categoria_id": (ID numérico ou null)
+        - "prioridade": ("baixa", "media" ou "alta")
         - "confianca": (0 a 100)
-        - "justificativa": (Breve explicação técnica do que viu na foto em português)
+        - "justificativa": (Breve explicação técnica do que viu na foto e por que escolheu essa prioridade em português)
         """
 
         response = model.generate_content([prompt, img])

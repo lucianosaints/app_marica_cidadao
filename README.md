@@ -14,31 +14,41 @@ O **Maricá Cidadão** é uma plataforma moderna de Zeladoria Urbana que conecta
 ### 🛰️ Geolocalização Automática (GPS)
 Implementamos uma captura proativa de GPS. Assim que o cidadão abre o formulário, o sistema sincroniza com os satélites e marca o local exato do problema no mapa sem necessidade de intervenção manual (via HTTPS).
 
-### 📊 Painel Administrativo Premium
-Interface administrativa baseada no **Jazzmin**, oferecendo uma experiência de gestão otimizada para os servidores da prefeitura, com dashboards, filtros avançados e logs de auditoria.
+### 🤖 Inteligência Artificial (Gemini 1.5 Flash)
+O sistema utiliza IA para analisar as fotos dos problemas em tempo real. A IA sugere automaticamente a categoria do incidente e define a prioridade (Alta, Média, Baixa) com base na gravidade visual, agilizando a triagem da prefeitura.
 
-### 🛡️ Transparência Total
-Cada mudança de status gera um registro histórico automático. O cidadão recebe atualizações em tempo real sobre o progresso do seu chamado.
+### 📱 PWA & Funcionamento Offline
+O aplicativo é um **PWA (Progressive Web App)**, permitindo a instalação no celular como um app nativo. Conta com persistência via **IndexedDB**, permitindo que o cidadão registre problemas mesmo sem internet; o envio é sincronizado automaticamente assim que a conexão retorna.
+
+### 🔔 Notificações WebPush
+Integração com o serviço de **WebPush** do navegador para enviar notificações em tempo real diretamente para o dispositivo do cidadão quando houver atualizações nos seus chamados.
+
+### 📊 Painel Administrativo Premium & Relatórios
+Interface administrativa baseada no **Jazzmin** com dashboards interativos, heatmap de incidentes e geração de **relatórios gerenciais em PDF** para suporte à tomada de decisão pública.
 
 ---
 
 ## 🛠️ Stack Tecnológica
 
 ### Backend & API
-- **Django 5.x**: Framework robusto para a lógica de negócio e Admin.
-- **Django REST Framework**: API escalável para comunicação com o frontend.
-- **Gunicorn & WhiteNoise**: Servidor de aplicação e gestão de arquivos estáticos em produção.
-- **PostgreSQL**: Banco de dados relacional robusto para produção.
+- **Django 5.x**: Core do sistema e lógica de negócio.
+- **Django REST Framework**: API para comunicação frontend-backend.
+- **Google Generative AI**: Integração com Gemini para análise de imagens.
+- **FPDF2**: Geração de relatórios PDF profissionais.
+- **PyWebPush**: Motor de notificações push.
+- **Gunicorn & WhiteNoise**: Servidor de aplicação e gestão de estáticos.
+- **PostgreSQL**: Banco de dados relacional.
 
-### Frontend
-- **React 18**: Interface reativa e rápida para o cidadão.
-- **Leaflet Maps**: Integração de mapas interativos para marcação de incidentes.
-- **CSS3 Personalizado**: Design responsivo e focado em dispositivos móveis (Mobile-First).
+### Frontend (PWA)
+- **Vanilla JS & React 18 (Cidadão)**: Interface reativa e Mobile-First.
+- **Leaflet Maps**: Mapas interativos e georreferenciamento.
+- **IndexedDB**: Armazenamento local para modo offline.
+- **Service Workers**: Cache de ativos e recepção de notificações push.
 
 ### Infraestrutura & Deploy
-- **Docker & Docker Compose**: Orquestração de containers para garantir que o app rode igual em qualquer lugar.
-- **Oracle Cloud (OCI)**: Hospedagem de alta performance.
-- **ngrok**: Túnel seguro HTTPS para habilitar geolocalização em navegadores modernos.
+- **Docker & Docker Compose**: Padronização do ambiente de execução.
+- **Oracle Cloud (OCI)**: Hospedagem escalável.
+- **ngrok**: Túnel HTTPS para geolocalização segura em desenvolvimento.
 
 ---
 
@@ -63,8 +73,7 @@ Acesse: `http://localhost:8000`
 
 O projeto está configurado para deploy contínuo em instâncias Ubuntu na OCI.
 1. Configure as **Ingress Rules** na VCN (Porta 8000).
-2. Use o script `scripts/setup_oci.sh` para preparar o servidor.
-3. Utilize o **ngrok** na VPS para ganhar o endereço HTTPS necessário para o GPS automático:
+2. Utilize o **ngrok** na VPS para ganhar o endereço HTTPS necessário para o GPS automático e WebPush:
 ```bash
 nohup ngrok http 8000 > /dev/null 2>&1 &
 ```

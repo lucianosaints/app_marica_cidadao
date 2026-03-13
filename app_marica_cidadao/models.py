@@ -17,6 +17,10 @@ class CategoriaProblema(models.Model):
     def __str__(self):
         return self.nome
 
+    class Meta:
+        verbose_name = "Categoria de Problema"
+        verbose_name_plural = "Categorias de Problemas"
+
 
 class RelatoZeladoria(models.Model):
     """
@@ -30,26 +34,34 @@ class RelatoZeladoria(models.Model):
         ('rejeitado', 'Rejeitado / Improcedente'),
     ]
 
+    PRIORIDADE_CHOICES = [
+        ('baixa', 'Baixa'),
+        ('media', 'Média'),
+        ('alta', 'Alta'),
+    ]
+
     cidadao = models.ForeignKey(User, on_delete=models.CASCADE, related_name='relatos')
     categoria = models.ForeignKey(CategoriaProblema, on_delete=models.PROTECT)
     
     # Dados do problema
     descricao = models.TextField(help_text="Descrição detalhada do cidadão")
-    foto_problema = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto tirada na hora (Câmera)")
-    foto_galeria = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto enviada da galeria")
+    foto_problema = models.ImageField(upload_to='relatos_cidadao/', blank=True, null=True, help_text="Foto do problema (obrigatório)")
     
     # Geolocalização
     latitude = models.FloatField(help_text="Latitude", null=True, blank=True)
     longitude = models.FloatField(help_text="Longitude", null=True, blank=True)
     endereco_aproximado = models.CharField(max_length=255, blank=True, null=True)
+    bairro = models.CharField(max_length=150, blank=True, null=True, help_text="Bairro onde o problema ocorreu")
     
     # Propriedade Privada
     e_propriedade_privada = models.BooleanField(default=False, help_text="O problema é em uma propriedade privada?")
     comprovante_titularidade = models.FileField(upload_to='comprovantes_relatos/', blank=True, null=True, help_text="Necessário se for propriedade privada")
     aceite_termo_ambiental = models.BooleanField(default=False, help_text="Ciente da compensação ambiental conforme Lei 2367/2011")
     
-    # Controle de estado
+    # Controle de estado e IA
     status_atual = models.CharField(max_length=20, choices=STATUS_CHOICES, default='recebido')
+    prioridade = models.CharField(max_length=20, choices=PRIORIDADE_CHOICES, default='baixa', help_text="Estimada pela IA ou servidora")
+    justificativa_ia = models.TextField(blank=True, null=True, help_text="Explicação técnica da IA")
     
     # Feedback do Cidadão (Pós-Resolução)
     avaliacao = models.IntegerField(null=True, blank=True, help_text="Avaliação de 1 a 5 estrelas")
@@ -60,7 +72,12 @@ class RelatoZeladoria(models.Model):
     atualizado_em = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Relato #{self.id} - {self.categoria.nome} ({self.get_status_atual_display()})"
+        return f"Protocolo #{self.id} - {self.categoria.nome}"
+
+    class Meta:
+        verbose_name = "Relato de Zeladoria"
+        verbose_name_plural = "Relatos de Zeladoria"
+        ordering = ['-criado_add'] if hasattr(models, 'criado_add') else ['-criado_em']
 
 
 class HistoricoStatus(models.Model):
@@ -94,6 +111,33 @@ class HistoricoStatus(models.Model):
     def __str__(self):
         return f"Atualização #{self.id} para Relato #{self.relato.id}"
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        if is_new:
+            # Envia a notificação Push quando um novo histórico é criado (status alterado no banco)
+            try:
+                from .webpush_service import disparar_notificacao_push
+                from .models import RelatoZeladoria
+                
+                status_legivel = dict(RelatoZeladoria.STATUS_CHOICES).get(self.status, self.status)
+                titulo = f"Maricá Cidadão - Atualização"
+                mensagem = f"O status do seu chamado '{self.relato.categoria.nome}' mudou para: {status_legivel}."
+                
+                if self.observacao_prefeitura:
+                    mensagem += f"\nObs: {self.observacao_prefeitura}"
+                    
+                disparar_notificacao_push(
+                    user=self.relato.cidadao,
+                    title=titulo,
+                    message=mensagem,
+                    url="/"
+                )
+            except Exception as e:
+                print(f"Aviso: Falha ao enviar WebPush automático: {str(e)}")
+
+
 
 class PerfilCidadao(models.Model):
     """
@@ -120,4 +164,27 @@ class PerfilCidadao(models.Model):
     )
 
     def __str__(self):
-        return f"Perfil de {self.user.username} (CPF: {self.cpf})"
+        return f"{self.user.get_full_name() or self.user.username} ({self.cpf})"
+
+    class Meta:
+        verbose_name = "Perfil do Cidadão"
+        verbose_name_plural = "Perfis dos Cidadãos"
+
+
+class WebPushSubscription(models.Model):
+    """
+    Armazena as inscrições dos dispositivos dos cidadãos para receber push notifications.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='webpush_subscriptions')
+    endpoint = models.URLField(max_length=500, unique=True, help_text="URL gerada pelo serviço de push do navegador")
+    p256dh = models.CharField(max_length=200, help_text="Chave pública do dispositivo (ECDH)")
+    auth = models.CharField(max_length=200, help_text="Segredo de autenticação do dispositivo")
+    
+    criado_em = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Inscrição WebPush"
+        verbose_name_plural = "Inscrições WebPush"
+
+    def __str__(self):
+        return f"Push endpoint para {self.user.username}"

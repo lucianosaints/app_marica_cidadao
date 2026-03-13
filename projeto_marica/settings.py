@@ -27,8 +27,13 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-fallback-key-change-m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# Configurações WebPush VAPID
+VAPID_PUBLIC_KEY = config('VAPID_PUBLIC_KEY', default='')
+VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
+VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='mailto:admin@marica.rj.gov.br')
+
 ALLOWED_HOSTS = [h.strip() for h in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')]
-ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev', '147.15.17.209']  # Permite domínios ngrok e OCI
+ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev']  # Permite domínios ngrok
 
 # Essencial para rodar atrás de ngrok/proxy HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -38,6 +43,7 @@ USE_X_FORWARDED_HOST = True
 # Application definition
 
 INSTALLED_APPS = [
+    'app_marica_cidadao',
     'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -52,7 +58,6 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Apps do Projeto
-    'app_marica_cidadao',
     'drf_spectacular',
 ]
 
@@ -124,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
 
@@ -148,15 +153,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Configuração do CORS
 CORS_ALLOW_ALL_ORIGINS = True
 
-# CSRF Trusted Origins para o IP da AWS
 CSRF_TRUSTED_ORIGINS = [
-    "http://54.94.109.90:8000",
-    "http://54.94.109.90",
-    "http://147.15.17.209:8000",
-    "http://147.15.17.209",
     "https://*.ngrok.io",
     "https://*.ngrok-free.app",
-    "https://*.ngrok-free.dev"
+    "https://*.ngrok-free.dev",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
 
 # LOGGING para ver erros 500 no terminal (docker logs)
@@ -218,7 +222,7 @@ STATICFILES_DIRS = [
 
 # Configurações do Jazzmin (Design Premium Admin)
 JAZZMIN_SETTINGS = {
-    "site_title": "Maricá Cidadão Admin",
+    "site_title": "Maricá Cidadão",
     "site_header": "",
     "site_brand": "",
     "site_logo": "Logo-prefeitura.png",
@@ -227,10 +231,11 @@ JAZZMIN_SETTINGS = {
     "copyright": "Prefeitura de Maricá",
     "search_model": ["auth.User", "app_marica_cidadao.RelatoZeladoria"],
     "user_avatar": None,
+    "site_url": "/",
     "topmenu_links": [
+        {"name": "Ver Site", "url": "/", "new_window": True},
         {"name": "Início",  "url": "admin:index", "permissions": ["auth.view_user"]},
         {"name": "Dashboard", "url": "admin_dashboard_stats", "new_window": False},
-        {"name": "Ver Site", "url": "/", "new_window": True},
         {"model": "auth.User"},
     ],
     "show_sidebar": True,
@@ -256,7 +261,7 @@ JAZZMIN_SETTINGS = {
     },
     "default_icon_parents": "fas fa-folder-open",
     "default_icon_children": "fas fa-circle",
-    "custom_css": "admin_custom.css",
+    "custom_css": "admin_custom_v2.css",
 }
 
 JAZZMIN_UI_TWEAKS = {

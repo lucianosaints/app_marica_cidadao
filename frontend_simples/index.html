@@ -16,9 +16,17 @@
   <link rel="apple-touch-icon" href="/logo/pwa_icon_512.jpg">
 
   <script>
+    // Inicialização imediata do tema para evitar flash de luz
+    (function() {
+      const savedTheme = localStorage.getItem('marica_theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.body.classList.add('dark-theme');
+      }
+    })();
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('/sw.js?v=4')
           .then(reg => console.log('Service Worker registrado!', reg))
           .catch(err => console.log('Erro ao registrar SW:', err));
       });
@@ -28,6 +36,11 @@
   <!-- Leaflet Maps CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
 
   <!-- React & ReactDOM (Via CDN) -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -41,6 +54,31 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <style>
+    :root {
+      --bg-primary: #f0f2f5;
+      --bg-secondary: #ffffff;
+      --text-primary: #2d3436;
+      --text-secondary: #636e72;
+      --accent-color: #3498db;
+      --accent-hover: #2980b9;
+      --success-color: #2ecc71;
+      --border-color: #bdc3c7;
+      --card-shadow: rgba(0, 0, 0, 0.1);
+      --input-bg: #ffffff;
+    }
+
+    body.dark-theme {
+      --bg-primary: #1a1a1a;
+      --bg-secondary: #2d2d2d;
+      --text-primary: #f5f6fa;
+      --text-secondary: #b2bec3;
+      --accent-color: #3498db;
+      --accent-hover: #54a0ff;
+      --border-color: #4b4b4b;
+      --card-shadow: rgba(0, 0, 0, 0.4);
+      --input-bg: #3d3d3d;
+    }
+
     html,
     body {
       overflow-x: hidden;
@@ -48,10 +86,11 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      transition: background-color 0.3s, color 0.3s;
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Outfit', sans-serif;
       background-image: url("logo/fundo.png");
       background-size: cover;
       background-attachment: fixed;
@@ -62,17 +101,32 @@
       align-items: flex-start;
       min-height: 100vh;
       -webkit-tap-highlight-color: transparent;
+      color: var(--text-primary);
+      background-color: var(--bg-primary);
+    }
+
+    /* Sobreposição para Dark Mode quando a imagem de fundo está ativa */
+    body.dark-theme::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: -1;
     }
 
     .formulario-container {
-      background-color: white;
+      background-color: var(--bg-secondary);
       padding: 15px;
       border-radius: 15px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 15px var(--card-shadow);
       width: 100%;
       max-width: 500px;
       box-sizing: border-box;
       margin: 5px auto;
+      transition: background-color 0.3s, box-shadow 0.3s;
     }
 
     /* Media Query para Desktop */
@@ -88,7 +142,7 @@
     }
 
     h2 {
-      color: #2c3e50;
+      color: var(--text-primary);
       text-align: center;
       margin-bottom: 25px;
     }
@@ -97,23 +151,30 @@
       display: block;
       margin-bottom: 8px;
       font-weight: 600;
-      color: #34495e;
+      color: var(--text-secondary);
     }
 
     select,
     textarea,
-    input[type="file"] {
+    input[type="file"],
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="date"] {
       width: 100%;
       padding: 10px;
       margin-bottom: 20px;
-      border: 1px solid #bdc3c7;
+      border: 1px solid var(--border-color);
       border-radius: 6px;
       box-sizing: border-box;
       font-family: inherit;
+      background-color: var(--input-bg);
+      color: var(--text-primary);
+      transition: background-color 0.3s, border-color 0.3s, color 0.3s;
     }
 
     button {
-      background-color: #3498db;
+      background-color: var(--accent-color);
       color: white;
       border: none;
       padding: 12px 20px;
@@ -122,11 +183,12 @@
       width: 100%;
       font-size: 16px;
       font-weight: bold;
-      transition: background-color 0.3s;
+      transition: all 0.3s;
     }
 
     button:hover {
-      background-color: #2980b9;
+      background-color: var(--accent-hover);
+      transform: translateY(-2px);
     }
 
     button:active {
@@ -207,19 +269,133 @@
   <script type="text/babel">
     const { useState } = React;
 
+    // Utilitário para converter a chave VAPID base64 para ArrayBuffer
+    function urlB64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
+    }
+
+    // URL do Backend fixada para Ambiente Local
+    const API_BASE_URL = `http://127.0.0.1:8000`;
+
+    // --- LÓGICA DE PERSISTÊNCIA OFFLINE (IndexedDB) ---
+    const DB_NAME = 'MaricaCidadaoDB';
+    const DB_VERSION = 1;
+
+    const abrirDB = () => {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('relatos_offline')) {
+            db.createObjectStore('relatos_offline', { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+      });
+    };
+
+    const salvarRelatoOffline = async (relatoData) => {
+      const db = await abrirDB();
+      const tx = db.transaction('relatos_offline', 'readwrite');
+      const store = tx.objectStore('relatos_offline');
+      // Converte File/Blob para algo serializável (Data URL ou ArrayBuffer se necessário)
+      // Mas IndexedDB suporta Blobs nativamente!
+      await store.add({ ...relatoData, timestamp: Date.now() });
+      return new Promise((resolve) => tx.oncomplete = resolve);
+    };
+
+    const listarRelatosOffline = async () => {
+      const db = await abrirDB();
+      const tx = db.transaction('relatos_offline', 'readonly');
+      const store = tx.objectStore('relatos_offline');
+      const request = store.getAll();
+      return new Promise((resolve) => request.onsuccess = () => resolve(request.result));
+    };
+
+    const removerRelatoOffline = async (id) => {
+      const db = await abrirDB();
+      const tx = db.transaction('relatos_offline', 'readwrite');
+      const store = tx.objectStore('relatos_offline');
+      await store.delete(id);
+      return new Promise((resolve) => tx.oncomplete = resolve);
+    };
+
+    const MapaPublico = ({ onBack }) => {
+      const [relatos, setRelatos] = useState([]);
+      const mapPublicRef = React.useRef(null);
+
+      React.useEffect(() => {
+        if (!mapPublicRef.current) {
+          mapPublicRef.current = L.map('map-public').setView([-22.9194, -42.8186], 13);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapPublicRef.current);
+        }
+
+        fetch(`${API_BASE_URL}/api/public/relatos/`)
+          .then(res => res.json())
+          .then(data => {
+            setRelatos(data);
+            data.forEach(relato => {
+              if (relato.latitude && relato.longitude) {
+                const marker = L.marker([relato.latitude, relato.longitude]).addTo(mapPublicRef.current);
+                marker.bindPopup(`
+                  <strong>${relato.categoria_emoji} ${relato.categoria_nome}</strong><br>
+                  Status: ${relato.status_display}<br>
+                  Data: ${relato.criado_em}
+                `);
+              }
+            });
+          })
+          .catch(err => console.error("Erro ao carregar mapa público:", err));
+
+        return () => {
+          if (mapPublicRef.current) {
+            mapPublicRef.current.remove();
+            mapPublicRef.current = null;
+          }
+        };
+      }, []);
+
+      return (
+        <div className="formulario-container" style={{ maxWidth: '600px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+             <button onClick={onBack} style={{ width: 'auto', backgroundColor: '#95a5a6', padding: '5px 10px' }}>← Voltar</button>
+             <h2 style={{ margin: 0, fontSize: '18px' }}>📍 Mapa da Cidade (Transparência)</h2>
+          </div>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '10px' }}>
+            Acompanhe em tempo real os problemas relatados pelos cidadãos de Maricá. Os dados são anônimos para sua segurança.
+          </p>
+          <div id="map-public" style={{ height: '400px', width: '100%', borderRadius: '15px', border: '2px solid var(--border-color)' }}></div>
+          <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+             <div style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+               <span style={{ width: '8px', height: '8px', backgroundColor: '#3498db', borderRadius: '50%' }}></span> Total: {relatos.length}
+             </div>
+          </div>
+        </div>
+      );
+    };
+
     const FormularioZeladoria = ({ token, username, onLogout, onSuccess, onBack }) => {
       const [descricao, setDescricao] = useState('');
       const [localizacao, setLocalizacao] = useState({ lat: -22.9194, lng: -42.8186 }); // Maricá por padrão
       const [foto, setFoto] = useState(null);
-      const [fotoGaleria, setFotoGaleria] = useState(null);
       const [previewUrl, setPreviewUrl] = useState(null);
-      const [previewGaleriaUrl, setPreviewGaleriaUrl] = useState(null);
       const [categoria, setCategoria] = useState('');
       const [enderecoAproximado, setEnderecoAproximado] = useState('');
+      const [bairro, setBairro] = useState('');
       const [statusEnvio, setStatusEnvio] = useState('');
       const [isCapturandoGps, setIsCapturandoGps] = useState(false);
       const [isAnalisandoIa, setIsAnalisandoIa] = useState(false);
       const [sugestaoIa, setSugestaoIa] = useState(null);
+      const [prioridade, setPrioridade] = useState('baixa');
+      const [justificativaIa, setJustificativaIa] = useState('');
       const [localizacaoConfirmada, setLocalizacaoConfirmada] = useState(false);
       const [listaCategorias, setListaCategorias] = useState([]);
       const [ePropriedadePrivada, setEPropriedadePrivada] = useState(false);
@@ -259,7 +435,7 @@
         }
 
         // Busca categorias da API
-        fetch('/api/categorias/')
+        fetch(`${API_BASE_URL}/api/categorias/`)
           .then(res => res.json())
           .then(data => setListaCategorias(data))
           .catch(err => console.error("Erro ao carregar categorias:", err));
@@ -315,7 +491,7 @@
         formData.append('foto_problema', arquivo);
 
         try {
-          const resposta = await fetch('/api/analisar-foto/', {
+          const resposta = await fetch(`${API_BASE_URL}/api/analisar-foto/`, {
             method: 'POST',
             headers: { 'Authorization': `Token ${token}` },
             body: formData
@@ -326,7 +502,9 @@
             if (data.categoria_id) {
               setCategoria(data.categoria_id.toString());
               setSugestaoIa(data);
-              setStatusEnvio(`🤖 IA: Identificamos um "${data.justificativa}". Categoria ajustada!`);
+              setPrioridade(data.prioridade || 'baixa');
+              setJustificativaIa(data.justificativa || '');
+              setStatusEnvio(`🤖 IA: Identificamos um "${data.justificativa}". Prioridade: ${data.prioridade.toUpperCase()}!`);
             } else {
               setStatusEnvio('🤖 IA: Não consegui identificar a categoria automaticamente. Por favor, selecione manualmente.');
             }
@@ -343,7 +521,7 @@
         e.preventDefault();
 
         if (!localizacao.lat || !foto) {
-          setStatusEnvio('Por favor, tire uma foto e capture a localização via GPS.');
+          setStatusEnvio('Por favor, adicione uma foto do problema e capture a localização via GPS.');
           return;
         }
 
@@ -353,10 +531,12 @@
         formData.append('descricao', descricao);
         formData.append('categoria', categoria);
         formData.append('endereco_aproximado', enderecoAproximado);
+        if (bairro) formData.append('bairro', bairro);
         formData.append('latitude', parseFloat(localizacao.lat));
         formData.append('longitude', parseFloat(localizacao.lng));
         formData.append('foto_problema', foto);
-        formData.append('foto_galeria', fotoGaleria);
+        formData.append('prioridade', prioridade);
+        formData.append('justificativa_ia', justificativaIa);
         formData.append('e_propriedade_privada', ePropriedadePrivada);
         if (ePropriedadePrivada) {
           if (comprovante) formData.append('comprovante_titularidade', comprovante);
@@ -364,7 +544,7 @@
         }
 
         try {
-          const resposta = await fetch('/api/relatos/', {
+          const resposta = await fetch(`${API_BASE_URL}/api/relatos/`, {
             method: 'POST',
             headers: {
               'Authorization': `Token ${token}`
@@ -377,10 +557,9 @@
             setDescricao('');
             setEnderecoAproximado('');
             setFoto(null);
-            setFotoGaleria(null);
             setPreviewUrl(null);
-            setPreviewGaleriaUrl(null);
             setCategoria('');
+            setBairro('');
             setEPropriedadePrivada(false);
             setComprovante(null);
             setAceiteTermoAmbiental(false);
@@ -388,15 +567,97 @@
           } else {
             const erroData = await resposta.json();
             console.error("Erro da API:", erroData);
-            // Tenta pegar a primeira mensagem de erro se disponível
             const msgErro = Object.values(erroData)[0];
             setStatusEnvio(`❌ Erro: ${Array.isArray(msgErro) ? msgErro[0] : 'Verifique se todos os campos estão preenchidos.'}`);
           }
         } catch (erro) {
-          console.error("Erro na requisição:", erro);
-          setStatusEnvio(`❌ Erro de conexão: ${erro.message}. A API está rodando?`);
+          console.error("Erro na requisição (provável offline):", erro);
+          
+          // Se falhou por rede, salva no IndexedDB
+          try {
+            const relatoOffline = {
+              descricao,
+              categoria,
+              endereco_aproximado: enderecoAproximado,
+              bairro,
+              latitude: parseFloat(localizacao.lat),
+              longitude: parseFloat(localizacao.lng),
+              foto_problema: foto, // IndexedDB suporta Blob/File
+              prioridade,
+              justificativa_ia: justificativaIa,
+              e_propriedade_privada: ePropriedadePrivada,
+              comprovante_titularidade: comprovante,
+              aceite_termo_ambiental: aceiteTermoAmbiental,
+              token // Guardamos o token para quando enviar
+            };
+            
+            await salvarRelatoOffline(relatoOffline);
+            setStatusEnvio('📵 Você está sem internet! O relato foi salvo no seu celular e será enviado automaticamente assim que a conexão voltar. ✅');
+            
+            // Limpa o formulário como se tivesse enviado
+            setDescricao('');
+            setEnderecoAproximado('');
+            setFoto(null);
+            setPreviewUrl(null);
+            setCategoria('');
+            setBairro('');
+          } catch (dbError) {
+            console.error("Erro ao salvar offline:", dbError);
+            setStatusEnvio(`❌ Erro crítico: ${erro.message}.`);
+          }
         }
       };
+
+      // --- EFEITO DE SINCRONIZAÇÃO AUTOMÁTICA ---
+      React.useEffect(() => {
+        const sincronizarPendentes = async () => {
+          if (!navigator.onLine) return;
+          
+          const pendentes = await listarRelatosOffline();
+          if (pendentes.length === 0) return;
+
+          console.log(`🔄 Sincronizando ${pendentes.length} relatos offline...`);
+          
+          for (const relato of pendentes) {
+            const formData = new FormData();
+            formData.append('descricao', relato.descricao);
+            formData.append('categoria', relato.categoria);
+            formData.append('endereco_aproximado', relato.endereco_aproximado);
+            if (relato.bairro) formData.append('bairro', relato.bairro);
+            formData.append('latitude', relato.latitude);
+            formData.append('longitude', relato.longitude);
+            formData.append('foto_problema', relato.foto_problema);
+            formData.append('prioridade', relato.prioridade);
+            formData.append('justificativa_ia', relato.justificativa_ia);
+            formData.append('e_propriedade_privada', relato.e_propriedade_privada);
+            if (relato.e_propriedade_privada && relato.comprovante_titularidade) {
+              formData.append('comprovante_titularidade', relato.comprovante_titularidade);
+              formData.append('aceite_termo_ambiental', relato.aceite_termo_ambiental);
+            }
+
+            try {
+              const res = await fetch(`${API_BASE_URL}/api/relatos/`, {
+                method: 'POST',
+                headers: { 'Authorization': `Token ${relato.token}` },
+                body: formData
+              });
+              if (res.ok) {
+                await removerRelatoOffline(relato.id);
+                console.log(`✅ Relato #${relato.id} sincronizado com sucesso!`);
+                if (onSuccess) onSuccess(); // Atualiza a lista principal
+              }
+            } catch (e) {
+              console.error("Falha ao sincronizar item individual:", e);
+            }
+          }
+        };
+
+        window.addEventListener('online', sincronizarPendentes);
+        // Tenta sincronizar ao montar o componente se já estiver online
+        sincronizarPendentes();
+
+        return () => window.removeEventListener('online', sincronizarPendentes);
+      }, []);
 
       return (
         <div style={{ width: '95%', maxWidth: '450px', margin: '0 auto', paddingBottom: '20px' }}>
@@ -449,6 +710,21 @@
                     </option>
                   ))}
                 </select>
+
+                {/* Indicador de Prioridade IA */}
+                {sugestaoIa && (
+                  <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', padding: '10px', backgroundColor: 'var(--bg-primary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontWeight: '800' }}>🚀 Prioridade sugerida:</span>
+                    <span style={{ 
+                      padding: '4px 10px', borderRadius: '20px', fontWeight: '800', textTransform: 'uppercase', fontSize: '11px',
+                      backgroundColor: prioridade === 'alta' ? '#e84118' : prioridade === 'media' ? '#f39c12' : '#2ecc71',
+                      color: 'white'
+                    }}>{prioridade}</span>
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                      Justificativa: {justificativaIa}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -464,10 +740,31 @@
 
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📍 Onde é o problema?</label>
+                
+                <select
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', backgroundColor: 'white', marginBottom: '10px' }}
+                  required
+                >
+                  <option value="">Selecione o Bairro / Região...</option>
+                  <option value="Itaipuaçu">Itaipuaçu</option>
+                  <option value="Inoã">Inoã</option>
+                  <option value="Centro">Centro de Maricá</option>
+                  <option value="Ponta Negra">Ponta Negra</option>
+                  <option value="São José do Imbassaí">São José do Imbassaí</option>
+                  <option value="Cordeirinho">Cordeirinho</option>
+                  <option value="Guaratiba">Guaratiba</option>
+                  <option value="Bambuí">Bambuí</option>
+                  <option value="Itapeba">Itapeba</option>
+                  <option value="Araçatiba">Araçatiba</option>
+                  <option value="Maricá (Outros)">Outro Bairro</option>
+                </select>
+
                 <textarea
                   value={enderecoAproximado}
                   onChange={(e) => setEnderecoAproximado(e.target.value)}
-                  placeholder="Avenida principal, em frente à loja tal..."
+                  placeholder="Nome da rua, Avenida principal, em frente à loja tal..."
                   style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #dcdde1', fontSize: '15px', minHeight: '60px', outline: 'none', transition: 'box-shadow 0.3s' }}
                   required
                 />
@@ -523,11 +820,11 @@
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
                 <div style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📸 Foto do Local:</label>
+                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>📸 Foto do Problema:</label>
+                  <p style={{ fontSize: '11px', color: '#7f8c8d', marginBottom: '10px', marginTop: '-4px' }}>Tire uma foto na hora ou escolha da sua galeria.</p>
                   <input
                     type="file"
                     accept="image/*"
-                    capture="environment"
                     onChange={(e) => {
                       const file = e.target.files[0];
                       setFoto(file);
@@ -547,25 +844,6 @@
                       <strong>🤖 Sugestão da IA:</strong> {sugestaoIa.justificativa} ({sugestaoIa.confianca}% de confiança)
                     </div>
                   )}
-                </div>
-
-                <div style={{ backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0' }}>
-                  <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🖼️ Foto da Galeria:</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      setFotoGaleria(file);
-                      if (file) {
-                        const url = URL.createObjectURL(file);
-                        setPreviewGaleriaUrl(url);
-                      }
-                    }}
-                    style={{ fontSize: '12px', marginBottom: '10px', width: '100%' }}
-                  />
-                  {previewGaleriaUrl && <img src={previewGaleriaUrl} className="preview-foto" alt="Preview Galeria" />}
-                  <p style={{ fontSize: '10px', color: '#7f8c8d' }}>Use esta opção para enviar fotos que já estão no seu celular.</p>
                 </div>
                 <div style={{ textAlign: 'center', backgroundColor: '#fdfdfd', padding: '15px', borderRadius: '10px', border: '1px dashed #cbd5e0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#34495e' }}>🛰️ Localização GPS:</label>
@@ -667,7 +945,7 @@
         }
 
         try {
-          const resposta = await fetch('/api/cadastro/', {
+          const resposta = await fetch(`${API_BASE_URL}/api/cadastro/`, {
             method: 'POST',
             body: formData
           });
@@ -765,32 +1043,29 @@
     };
 
 
-    const Login = ({ onLoginSuccess, onGoToCadastro }) => {
+    const Login = ({ onLoginSuccess, onGoToCadastro, onViewPublicMap }) => {
       const [username, setUsername] = useState('');
       const [password, setPassword] = useState('');
       const [erro, setErro] = useState('');
 
       const handleLogin = async (e) => {
+        // ... (manter lógica existente) ...
         e.preventDefault();
         setErro('Autenticando...');
-
         try {
-          const resposta = await fetch('/api/login/', {
+          const resposta = await fetch(`${API_BASE_URL}/api/login/`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password })
           });
-
           if (resposta.ok) {
             const data = await resposta.json();
             onLoginSuccess(data.token, data.username);
           } else {
-            setErro('Acesso Negado. Cidadão não encontrado ou senha incorreta.');
+            setErro('Acesso Negado. Verifique seus dados.');
           }
         } catch (err) {
-          setErro('Erro ao se conectar com o sistema da Prefeitura.');
+          setErro('Erro ao se conectar com a Prefeitura.');
         }
       };
 
@@ -810,54 +1085,37 @@
             </div>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#2c3e50' }}>Maricá Cidadão</h2>
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div>
-                <label style={{ fontSize: '14px', marginBottom: '5px' }}>👤 CPF ou Usuário:</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Seu CPF ou nome"
-                  required
-                  style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px', outline: 'none' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '14px', marginBottom: '5px' }}>🔒 Senha:</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Sua senha segura"
-                  required
-                  style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px', outline: 'none' }}
-                />
-              </div>
-              <button
-                type="submit"
-                style={{
-                  padding: '15px',
-                  backgroundColor: '#0097e6',
-                  boxShadow: '0 4px 10px rgba(0, 151, 230, 0.3)',
-                  marginTop: '10px'
-                }}
-              >
-                Login 🚀
-              </button>
-              <button
-                type="button"
-                onClick={onGoToCadastro}
-                style={{
-                  backgroundColor: 'transparent',
-                  color: '#7f8c8d',
-                  border: '1px solid #dcdde1',
-                  padding: '10px',
-                  fontSize: '14px'
-                }}
-              >
-                Não tem conta? Cadastre-se
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Usuário ou CPF"
+                required
+                style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px' }}
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Sua senha"
+                required
+                style={{ width: '100%', padding: '12px', border: '1px solid #dcdde1', borderRadius: '8px' }}
+              />
+              <button type="submit" className="login-btn" style={{ padding: '15px', backgroundColor: '#3498db', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                Entrar no Sistema 🚀
               </button>
             </form>
-            {erro && <div className="status-mensagem" style={{ backgroundColor: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2', padding: '10px', fontSize: '13px' }}>{erro}</div>}
+
+            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button onClick={onViewPublicMap} style={{ padding: '12px', backgroundColor: 'transparent', border: '1px solid #3498db', color: '#3498db', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                📍 Ver Mapa da Cidade (Público)
+              </button>
+              <button onClick={onGoToCadastro} style={{ padding: '12px', backgroundColor: '#f1f2f6', border: 'none', color: '#2f3640', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' }}>
+                📝 Criar Conta de Cidadão
+              </button>
+            </div>
+
+            {erro && <div style={{ marginTop: '15px', color: '#e84118', textAlign: 'center', fontSize: '13px' }}>⚠️ {erro}</div>}
           </div>
         </div>
       );
@@ -867,46 +1125,112 @@
       const [relatos, setRelatos] = useState([]);
       const [carregando, setCarregando] = useState(true);
       const [erro, setErro] = useState('');
+      const [filtro, setFiltro] = useState('');
       const [deferredPrompt, setDeferredPrompt] = useState(null);
       const [showInstallBtn, setShowInstallBtn] = useState(false);
+      const [isOnline, setIsOnline] = useState(navigator.onLine);
 
       React.useEffect(() => {
-        window.addEventListener('beforeinstallprompt', (e) => {
+        const updateStatus = () => setIsOnline(navigator.onLine);
+        window.addEventListener('online', updateStatus);
+        window.addEventListener('offline', updateStatus);
+        return () => {
+          window.removeEventListener('online', updateStatus);
+          window.removeEventListener('offline', updateStatus);
+        };
+      }, []);
+
+      // --- WEB PUSH NOTIFICATIONS ---
+      React.useEffect(() => {
+        const configurarWebPush = async () => {
+          if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.log('WebPush não suportado.');
+            return;
+          }
+
+          try {
+            // 1. Pedir permissão
+            const permissao = await window.Notification.requestPermission();
+            if (permissao !== 'granted') {
+              console.log('Permissão para notificações negada.');
+              return;
+            }
+
+            // 2. Obter a chave pública da API
+            const keyResponse = await fetch(`${API_BASE_URL}/api/webpush/vapid-public-key/`);
+            if (!keyResponse.ok) throw new Error('Falha ao buscar chave VAPID');
+            const { public_key } = await keyResponse.json();
+            
+            if (!public_key) return; // Backend pode não ter configurado ainda
+
+            // 3. Pegar o Service Worker ativo e assinar
+            const registration = await navigator.serviceWorker.ready;
+            const applicationServerKey = urlB64ToUint8Array(public_key);
+            
+            const subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: applicationServerKey
+            });
+
+            // 4. Enviar para a nossa API salvar
+            await fetch(`${API_BASE_URL}/api/webpush/inscrever/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${token}`
+              },
+              body: JSON.stringify(subscription)
+            });
+
+            console.log('WebPush configurado e inscrito com sucesso!');
+          } catch (erro) {
+            console.error('Erro ao configurar WebPush:', erro);
+          }
+        };
+
+        configurarWebPush();
+      }, [token]);
+
+      React.useEffect(() => {
+        const handleBeforeInstall = (e) => {
           e.preventDefault();
           setDeferredPrompt(e);
           setShowInstallBtn(true);
-        });
-
-        window.addEventListener('appinstalled', () => {
+        };
+        const handleAppInstalled = () => {
           setShowInstallBtn(false);
           setDeferredPrompt(null);
-        });
+        };
+        window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+        window.addEventListener('appinstalled', handleAppInstalled);
+        return () => {
+          window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+          window.removeEventListener('appinstalled', handleAppInstalled);
+        };
       }, []);
 
       const handleInstallClick = async () => {
         if (!deferredPrompt) return;
         deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          setShowInstallBtn(false);
-        }
+        if (outcome === 'accepted') setShowInstallBtn(false);
         setDeferredPrompt(null);
       };
 
       React.useEffect(() => {
         const carregarRelatos = async () => {
           try {
-            const resposta = await fetch('/api/relatos/', {
+            const resposta = await fetch(`${API_BASE_URL}/api/relatos/`, {
               headers: { 'Authorization': `Token ${token}` }
             });
             if (resposta.ok) {
               const data = await resposta.json();
               setRelatos(data);
             } else {
-              setErro('Erro ao carregar relatos.');
+              setErro(`Erro ao carregar relatos: ${resposta.status}`);
             }
           } catch (err) {
-            setErro('Erro de conexão com o servidor.');
+            setErro(`Erro de conexão: ${err.message}`);
           } finally {
             setCarregando(false);
           }
@@ -931,252 +1255,158 @@
         em_andamento: relatos.filter(r => r.status_atual !== 'resolvido' && r.status_atual !== 'rejeitado').length
       };
 
+      const relatosFiltrados = relatos.filter(r => 
+        (r.categoria_nome || '').toLowerCase().includes(filtro.toLowerCase()) ||
+        (r.descricao || '').toLowerCase().includes(filtro.toLowerCase())
+      );
+
       return (
-        <div style={{ width: '95%', maxWidth: '450px', margin: '0 auto', paddingBottom: '30px' }}>
-          {/* Header Superior com Logos */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            backgroundColor: 'rgba(255,255,255,0.98)',
-            padding: '10px 15px',
-            borderRadius: '0 0 15px 15px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-            marginBottom: '25px',
-            backdropFilter: 'blur(8px)',
-            width: '100%',
-            boxSizing: 'border-box',
-            borderBottom: '2px solid #3498db',
-            flexWrap: 'wrap',
-            gap: '8px'
+        <div style={{ width: '95%', maxWidth: '500px', margin: '0 auto', paddingBottom: '30px', animation: 'fadeIn 0.5s ease-out' }}>
+          <style>{`
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            .glass-card { background: var(--bg-secondary); backdrop-filter: blur(10px); border: 1px solid var(--border-color); color: var(--text-primary); }
+            .stat-card { background: var(--bg-secondary); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid var(--border-color); }
+            .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px var(--card-shadow); }
+            .relato-card { transition: all 0.3s ease; border-left: 5px solid transparent; }
+            .relato-card:hover { transform: scale(1.02); box-shadow: 0 12px 30px var(--card-shadow); }
+            .search-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2); outline: none; }
+            .search-input { background-color: var(--input-bg); color: var(--text-primary); border: 1px solid var(--border-color); }
+          `}</style>
+
+          {/* Header Superior Premium */}
+          <div className="glass-card" style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '15px 20px', borderRadius: '20px', boxShadow: '0 8px 32px var(--card-shadow)',
+            marginBottom: '20px', marginTop: '10px', width: '100%', boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '26px' }} />
-              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '26px' }} />
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '30px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
+              <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)' }}></div>
+              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '28px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {showInstallBtn && (
-                <button
-                  onClick={handleInstallClick}
-                  style={{
-                    width: 'auto',
-                    backgroundColor: '#27ae60',
-                    padding: '5px 12px',
-                    fontSize: '11px',
-                    borderRadius: '15px',
-                    marginRight: '5px',
-                    boxShadow: '0 2px 4px rgba(39, 174, 96, 0.3)'
-                  }}
-                >
-                  📲 Instalar App
-                </button>
-              )}
-              <span style={{ fontWeight: '700', color: '#2c3e50', fontSize: '12px' }}>Olá, {username || 'Cidadão'}</span>
-              <button
-                type="button"
-                onClick={onLogout}
-                style={{
-                  width: 'auto',
-                  backgroundColor: '#ee5253',
-                  padding: '5px 12px',
-                  fontSize: '11px',
-                  borderRadius: '15px',
-                  boxShadow: '0 2px 4px rgba(238, 82, 83, 0.3)'
-                }}
-              >
-                Sair
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '5px' }}>
+                <span style={{ 
+                  width: '10px', height: '10px', borderRadius: '50%', 
+                  backgroundColor: isOnline ? '#2ecc71' : '#e74c3c',
+                  boxShadow: isOnline ? '0 0 10px #2ecc71' : '0 0 10px #e74c3c'
+                }}></span>
+                <span style={{ fontSize: '10px', fontWeight: 'bold', color: isOnline ? '#2ecc71' : '#e74c3c', textTransform: 'uppercase' }}>
+                  {isOnline ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Cidadão</div>
+                <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)' }}>{username || 'Usuário'}</div>
+              </div>
+              <button onClick={onLogout} style={{
+                  backgroundColor: 'rgba(232, 65, 24, 0.1)', color: '#e84118', width: '35px', height: '35px',
+                  borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  border: 'none', cursor: 'pointer', fontSize: '16px'
+                }} title="Sair">🚪</button>
             </div>
           </div>
 
-          {/* Banner de Boas-vindas e Ação Principal */}
-          <div style={{
-            backgroundColor: 'white',
-            padding: '30px 20px',
-            borderRadius: '15px',
-            boxShadow: '0 6px 20px rgba(0,0,0,0.06)',
-            marginBottom: '30px',
-            textAlign: 'center',
-            backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #f1f2f6 100%)',
-            width: '100%',
-            boxSizing: 'border-box'
+          {/* Banner Principal */}
+          <div className="glass-card" style={{
+            padding: '35px 25px', borderRadius: '25px', boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
+            marginBottom: '25px', textAlign: 'center', background: 'linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%)',
+            position: 'relative', overflow: 'hidden'
           }}>
-            <h1 style={{ color: '#2c3e50', margin: '0 0 10px 0', fontSize: '24px', fontWeight: '800' }}>Central de Zeladoria</h1>
-            <p style={{ color: '#7f8c8d', marginBottom: '25px', fontSize: '15px' }}>Transforme Maricá cuidando do seu bairro.</p>
-            <button
-              onClick={() => onChangeView('novo')}
-              style={{
-                width: '100%',
-                maxWidth: '300px',
-                padding: '18px',
-                fontSize: '18px',
-                fontWeight: 'bold',
-                backgroundColor: '#0097e6',
-                boxShadow: '0 5px 15px rgba(0, 151, 230, 0.4)',
-                borderRadius: '12px',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              🚀 Abrir Novo Chamado
-            </button>
+            <h1 style={{ color: '#2d3436', margin: '0 0 8px 0', fontSize: '26px', fontWeight: '800' }}>Central de Zeladoria</h1>
+            <p style={{ color: '#636e72', marginBottom: '30px', fontSize: '16px' }}>Ajude a tornar Maricá cada vez melhor.</p>
+            <button onClick={() => onChangeView('novo')} style={{
+                width: '100%', padding: '20px', fontSize: '18px', fontWeight: '800',
+                backgroundColor: '#3498db', backgroundImage: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                boxShadow: '0 10px 25px rgba(52, 152, 219, 0.4)', borderRadius: '15px',
+                border: 'none', color: 'white', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', gap: '10px'
+              }}>🚀 Abrir Novo Chamado</button>
           </div>
 
-          {/* Grid de Estatísticas - Responsivo */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-            gap: '15px',
-            marginBottom: '30px',
-            padding: '0 5px'
-          }}>
-            <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #3498db' }}>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#3498db', marginBottom: '4px' }}>{stats.total}</div>
-              <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Total</div>
-            </div>
-            <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #f39c12' }}>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#f39c12', marginBottom: '4px' }}>{stats.em_andamento}</div>
-              <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Abertos</div>
-            </div>
-            <div style={{ backgroundColor: 'white', padding: '18px 10px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.04)', borderBottom: '4px solid #2ecc71' }}>
-              <div style={{ fontSize: '28px', fontWeight: '800', color: '#2ecc71', marginBottom: '4px' }}>{stats.resolvidos}</div>
-              <div style={{ color: '#95a5a6', fontSize: '11px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.8px' }}>Resolvidos</div>
-            </div>
+          {/* Estatísticas Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '25px' }}>
+            {[
+              { label: 'Total', value: stats.total, color: '#3498db', icon: '📊' },
+              { label: 'Abertos', value: stats.em_andamento, color: '#f39c12', icon: '🕒' },
+              { label: 'Ok', value: stats.resolvidos, color: '#2ecc71', icon: '✅' }
+            ].map((s, idx) => (
+              <div key={idx} className="stat-card" style={{ background: 'white', padding: '15px 5px', borderRadius: '18px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+                <div style={{ fontSize: '18px', marginBottom: '5px' }}>{s.icon}</div>
+                <div style={{ fontSize: '22px', fontWeight: '800', color: s.color }}>{s.value}</div>
+                <div style={{ color: '#b2bec3', fontSize: '10px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>{s.label}</div>
+              </div>
+            ))}
           </div>
 
-          {/* Listagem de Protocolos */}
-          <div style={{ marginBottom: '20px', padding: '0 5px' }}>
-            <h2 style={{ color: 'white', margin: 0, textShadow: '1px 2px 4px rgba(0,0,0,0.2)', fontSize: '22px', fontWeight: '700' }}>Meus Protocolos Ativos</h2>
+          {/* Busca e Título */}
+          <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ color: 'white', margin: 0, fontSize: '20px', fontWeight: '800', textShadow: '0 2px 10px rgba(0,0,0,0.2)' }}>Seus Protocolos</h2>
+              {showInstallBtn && <button onClick={handleInstallClick} style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(5px)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', padding: '6px 12px', fontSize: '11px', borderRadius: '20px', fontWeight: '700' }}>📲 Instalar App</button>}
+            </div>
+            <input type="text" placeholder="🔍 Buscar por categoria ou descrição..." className="search-input" value={filtro} onChange={(e) => setFiltro(e.target.value)} style={{ width: '100%', padding: '15px 20px', borderRadius: '15px', border: 'none', fontSize: '14px', backgroundColor: 'rgba(255,255,255,0.95)', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', boxSizing: 'border-box' }} />
           </div>
 
-          {carregando && <div style={{ backgroundColor: 'white', padding: '50px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-            <p style={{ fontSize: '18px', color: '#7f8c8d' }}>Sincronizando com a prefeitura... ⏳</p>
-          </div>}
+          {carregando && <div style={{ textAlign: 'center', color: 'white', padding: '20px' }}>Carregando... ⏳</div>}
+          {erro && <div style={{ backgroundColor: '#feeef0', color: '#e84118', padding: '15px', borderRadius: '15px', marginBottom: '15px' }}>⚠️ {erro}</div>}
 
-          {erro && <div className="status-mensagem" style={{ backgroundColor: '#fff5f5', color: '#c53030', border: '1px solid #feb2b2' }}>{erro}</div>}
-
-          {!carregando && relatos.length === 0 && !erro && (
-            <div style={{ backgroundColor: 'white', padding: '50px 30px', borderRadius: '15px', textAlign: 'center', boxShadow: '0 8px 25px rgba(0,0,0,0.05)', border: '1px solid #f1f2f6' }}>
-              <div style={{ fontSize: '60px', marginBottom: '20px', filter: 'grayscale(0.5)' }}>📋</div>
-              <h3 style={{ margin: '0 0 10px 0', color: '#2c3e50', fontSize: '20px', fontWeight: '700' }}>Nenhum relato encontrado</h3>
-              <p style={{ color: '#95a5a6', fontSize: '15px', maxWidth: '300px', margin: '0 auto' }}>Você ainda não abriu nenhum chamado para a prefeitura. Comece agora ajudando sua cidade!</p>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {relatos.map(relato => (
-              <div key={relato.id} style={{
-                backgroundColor: 'white',
-                padding: '25px',
-                borderRadius: '15px',
-                boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-                transition: 'transform 0.2s',
-                cursor: 'pointer'
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {relatosFiltrados.map(relato => (
+              <div key={relato.id} className="relato-card glass-card" style={{
+                padding: '20px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                position: 'relative', borderLeft: `6px solid ${getStatusColor(relato.status_atual)}`
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f0f0f0', paddingBottom: '15px', marginBottom: '15px' }}>
-                  <div>
-                    <span style={{
-                      display: 'inline-block',
-                      backgroundColor: '#f1f2f6',
-                      color: '#57606f',
-                      padding: '3px 10px',
-                      borderRadius: '5px',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      marginBottom: '8px'
-                    }}>
-                      #{relato.id}
-                    </span>
-                    <h3 style={{ margin: '0', color: '#2c3e50', fontSize: '18px' }}>
-                      {relato.categoria_emoji} {relato.categoria_nome}
-                    </h3>
-                    <div style={{ marginTop: '5px', color: '#95a5a6', fontSize: '13px' }}>
-                      📅 Aberto em {new Date(relato.criado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                <div style={{ display: 'flex', gap: '15px' }}>
+                  {relato.foto_problema && (
+                    <div style={{ width: '80px', height: '80px', borderRadius: '15px', overflow: 'hidden', flexShrink: 0, boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                      <img src={relato.foto_problema} alt="Relato" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{
-                      backgroundColor: getStatusColor(relato.status_atual),
-                      color: 'white',
-                      padding: '6px 15px',
-                      borderRadius: '20px',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
-                    }}>
-                      {relato.status_display || relato.status_atual.toUpperCase()}
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#b2bec3' }}>#{relato.id}</span>
+                      <span style={{ fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', padding: '4px 8px', borderRadius: '8px', backgroundColor: `${getStatusColor(relato.status_atual)}15`, color: getStatusColor(relato.status_atual), border: `1px solid ${getStatusColor(relato.status_atual)}30` }}>{relato.status_display}</span>
                     </div>
+                    <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: '800', color: '#2d3436', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{relato.categoria_emoji} {relato.categoria_nome}</h3>
+                    <p style={{ margin: '0 0 8px 0', fontSize: '13px', color: '#636e72', display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{relato.descricao}</p>
+                    <div style={{ fontSize: '11px', color: '#b2bec3', fontWeight: '600' }}>📅 {new Date(relato.criado_em).toLocaleDateString()}</div>
                   </div>
                 </div>
-
-                <div style={{ color: '#2f3542', fontSize: '15px', lineHeight: '1.6', marginBottom: '20px' }}>
-                  {relato.descricao}
-                </div>
-
+                {relato.historico && relato.historico.length > 0 && (
+                  <div style={{ marginTop: '15px', padding: '12px 15px', backgroundColor: '#f9f9f9', borderRadius: '12px', fontSize: '13px', border: '1px solid #f1f2f6' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#3498db', marginBottom: '5px', textTransform: 'uppercase' }}>📢 Resposta da Prefeitura</div>
+                    <div style={{ color: '#2d3436', lineHeight: '1.4' }}>{relato.historico[0].observacao_prefeitura}</div>
+                  </div>
+                )}
                 {relato.status_atual === 'resolvido' && !relato.avaliacao && (
-                  <div style={{ backgroundColor: '#fff9db', padding: '15px', borderRadius: '10px', marginBottom: '15px', border: '1px solid #ffe066' }}>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#856404' }}>⭐ Como foi o atendimento?</h4>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                      {[1, 2, 3, 4, 5].map(estrela => (
-                        <span
-                          key={estrela}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const comentario = prompt('Deixe um breve comentário (opcional):');
-                            (async () => {
-                              try {
-                                await fetch(`/api/relatos/${relato.id}/`, {
-                                  method: 'PATCH',
-                                  headers: {
-                                    'Authorization': `Token ${token}`,
-                                    'Content-Type': 'application/json'
-                                  },
-                                  body: JSON.stringify({ avaliacao: estrela, comentario_cidadao: comentario })
-                                });
-                                alert('Obrigado pelo seu feedback! ⭐');
-                                window.location.reload();
-                              } catch (err) {
-                                alert('Erro ao enviar avaliação.');
-                              }
-                            })();
-                          }}
-                          style={{ fontSize: '24px', cursor: 'pointer', filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.1))' }}
-                        >
-                          ⭐
-                        </span>
+                  <div style={{ marginTop: '15px', textAlign: 'center', padding: '15px', backgroundColor: '#fffbe6', borderRadius: '15px', border: '1px solid #ffe58f' }}>
+                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', fontWeight: '700', color: '#856404' }}>Avalie este serviço: ⭐</p>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+                      {[1,2,3,4,5].map(s => (
+                        <span key={s} onClick={(e) => {
+                          e.stopPropagation();
+                          const msg = prompt('Seu comentário:');
+                          (async () => {
+                            try {
+                              const res = await fetch(`${API_BASE_URL}/api/relatos/${relato.id}/`, {
+                                method: 'PATCH',
+                                headers: { 'Authorization': `Token ${token}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ avaliacao: s, comentario_cidadao: msg })
+                              });
+                              if (res.ok) alert('Obrigado! ⭐'); window.location.reload();
+                            } catch(e) {}
+                          })();
+                        }} style={{ fontSize: '24px', cursor: 'pointer' }}>⭐</span>
                       ))}
                     </div>
-                    <p style={{ margin: 0, fontSize: '11px', color: '#856404' }}>Sua avaliação ajuda a melhorar Maricá.</p>
-                  </div>
-                )}
-
-                {relato.avaliacao && (
-                  <div style={{ marginBottom: '15px', fontSize: '13px', color: '#2ecc71', fontWeight: 'bold' }}>
-                    Sua avaliação: {'⭐'.repeat(relato.avaliacao)}
-                  </div>
-                )}
-
-                {relato.historico && relato.historico.length > 0 ? (
-                  <div style={{ backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '10px', border: '1px dashed #dcdde1' }}>
-                    <h4 style={{ margin: '0 0 12px 0', color: '#747d8c', fontSize: '13px', fontWeight: 'bold' }}>📍 ÚLTIMA ATUALIZAÇÃO DA PREFEITURA</h4>
-                    <div style={{ position: 'relative', paddingLeft: '15px' }}>
-                      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: '#3498db', borderRadius: '10px' }}></div>
-                      <div style={{ fontSize: '14px', color: '#2c3e50' }}>
-                        {relato.historico[0].observacao_prefeitura}
-                      </div>
-                      <small style={{ display: 'block', marginTop: '5px', color: '#a4b0be' }}>
-                        Atualizado em {new Date(relato.historico[0].data_atualizacao).toLocaleDateString()}
-                      </small>
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{ color: '#a4b0be', fontSize: '13px', fontStyle: 'italic' }}>
-                    Aguardando análise da secretaria competente.
                   </div>
                 )}
               </div>
             ))}
+            {!carregando && relatosFiltrados.length === 0 && (
+              <div style={{ textAlign: 'center', color: 'white', padding: '30px' }}>Nenhum protocolo encontrado.</div>
+            )}
           </div>
         </div>
       );
@@ -1185,8 +1415,22 @@
     const AppWrapper = () => {
       const [token, setToken] = useState(localStorage.getItem('marica_token') || null);
       const [username, setUsername] = useState(localStorage.getItem('marica_username') || '');
-      const [view, setView] = useState('lista'); // 'lista' ou 'novo'
+      const [view, setView] = useState('lista'); // 'lista', 'novo' ou 'mapa_publico'
       const [isRegistering, setIsRegistering] = useState(false);
+      const [showPublicMap, setShowPublicMap] = useState(false);
+      const [isDark, setIsDark] = useState(document.body.classList.contains('dark-theme'));
+
+      const toggleTheme = () => {
+        const newIsDark = !isDark;
+        setIsDark(newIsDark);
+        if (newIsDark) {
+          document.body.classList.add('dark-theme');
+          localStorage.setItem('marica_theme', 'dark');
+        } else {
+          document.body.classList.remove('dark-theme');
+          localStorage.setItem('marica_theme', 'light');
+        }
+      };
 
       const handleLogin = (newToken, newUsername) => {
         localStorage.setItem('marica_token', newToken);
@@ -1196,7 +1440,15 @@
         setView('lista');
       };
 
-      const handleLogout = () => {
+      const handleLogout = async () => {
+        if (token) {
+          try {
+            await fetch(`${API_BASE_URL}/api/logout/`, {
+              method: 'POST',
+              headers: { 'Authorization': `Token ${token}` }
+            });
+          } catch (err) {}
+        }
         localStorage.removeItem('marica_token');
         localStorage.removeItem('marica_username');
         setToken(null);
@@ -1204,18 +1456,48 @@
         setIsRegistering(false);
       };
 
+      // Injetar botão de tema global ou passar por props
+      const renderThemeToggle = () => (
+        <button onClick={toggleTheme} style={{
+          position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px',
+          borderRadius: '25px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+          boxShadow: '0 4px 15px var(--card-shadow)', zIndex: 9999, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', fontSize: '20px', cursor: 'pointer',
+          padding: 0
+        }} title="Alternar Tema">
+          {isDark ? '☀️' : '🌙'}
+        </button>
+      );
+
       if (!token) {
-        if (isRegistering) {
-          return <Cadastro onCadastroSuccess={() => setIsRegistering(false)} onBackToLogin={() => setIsRegistering(false)} />
-        }
-        return <Login onLoginSuccess={handleLogin} onGoToCadastro={() => setIsRegistering(true)} />
+        return (
+          <>
+            {renderThemeToggle()}
+            {showPublicMap ? (
+              <MapaPublico onBack={() => setShowPublicMap(false)} />
+            ) : isRegistering ? (
+              <Cadastro onCadastroSuccess={() => setIsRegistering(false)} onBackToLogin={() => setIsRegistering(false)} />
+            ) : (
+              <Login 
+                onLoginSuccess={handleLogin} 
+                onGoToCadastro={() => setIsRegistering(true)} 
+                onViewPublicMap={() => setShowPublicMap(true)} 
+              />
+            )}
+          </>
+        );
       }
 
-      if (view === 'novo') {
-        return <FormularioZeladoria token={token} username={username} onLogout={handleLogout} onSuccess={() => setView('lista')} onBack={() => setView('lista')} />;
-      }
-
-      return <DashboardCidadao token={token} username={username} onLogout={handleLogout} onChangeView={setView} />
+      return (
+        <>
+          {renderThemeToggle()}
+          {view === 'novo' ? (
+            <FormularioZeladoria token={token} username={username} onLogout={handleLogout} onSuccess={() => setView('lista')} onBack={() => setView('lista')} />
+          ) : (
+            <DashboardCidadao token={token} username={username} onLogout={handleLogout} onChangeView={setView} />
+          )}
+        </>
+      );
     };
 
     const root = ReactDOM.createRoot(document.getElementById('root'));

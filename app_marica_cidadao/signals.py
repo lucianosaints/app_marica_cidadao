@@ -5,14 +5,23 @@ from .models import HistoricoStatus
 @receiver(post_save, sender=HistoricoStatus)
 def notificar_mudanca_status(sender, instance, created, **kwargs):
     """
-    Sempre que um novo histórico de status é criado, 
-    uma notificação simulada é enviada ao cidadão.
+    Sempre que um novo histórico de status é criado:
+    1. Atualiza o status_atual do RelatoZeladoria vinculado.
+    2. Envia uma notificação simulada ao cidadão.
     """
     if created:
         relato = instance.relato
+        
+        # 1. Sincronização de Status (Garante que o frontend veja a mudança)
+        if relato.status_atual != instance.status:
+            relato.status_atual = instance.status
+            relato.save(update_fields=['status_atual', 'atualizado_em'])
+            print(f"INFO: Status do Relato #{relato.id} sincronizado para: {instance.status}")
+
         cidadao = relato.cidadao
-        # Tenta pegar o telefone do PerfilCidadao
-        telefone = getattr(cidadao.perfil, 'telefone', 'Não cadastrado')
+        # Tenta pegar o telefone do PerfilCidadao de forma segura
+        perfil = getattr(cidadao, 'perfil', None)
+        telefone = getattr(perfil, 'telefone', 'Não cadastrado') if perfil else 'Não cadastrado'
         
         status_msg = instance.get_status_display()
         

@@ -1,0 +1,211 @@
+{% extends "admin/index.html" %}
+{% load i18n static dashboard_tags %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .dashboard-container { padding: 10px 0 20px 0; }
+    .kpi-card { border: none; border-radius: 12px; transition: transform 0.3s ease; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 15px; }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.08); }
+    .kpi-card .card-body { padding: 20px; display: flex; align-items: center; justify-content: space-between; }
+    .kpi-icon { width: 45px; height: 45px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; }
+    .kpi-info h3 { margin: 0; font-weight: 700; font-size: 1.5rem; color: #2d3436; }
+    .kpi-info p { margin: 0; color: #636e72; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.5px; }
+    .chart-card { border: none; border-radius: 12px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .chart-card .card-header { background: transparent; border-bottom: 1px solid #f1f2f6; padding: 12px 15px; }
+    .chart-card .card-title { font-weight: 700; color: #2d3436; margin: 0; font-size: 0.95rem; }
+    .chart-card .card-body { padding: 15px; position: relative; min-height: 250px; }
+    .bg-grad-blue { background: linear-gradient(135deg, #3498db, #2980b9); }
+    .bg-grad-green { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+    .bg-grad-orange { background: linear-gradient(135deg, #f39c12, #e67e22); }
+    .bg-grad-purple { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    {% get_admin_dashboard_stats as stats %}
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 style="font-weight: 800; color: #2d3436; margin: 0;">📊 Central de Inteligência Urbana</h3>
+            <p class="text-muted small mb-0">Monitoramento estratégico da zeladoria municipal</p>
+        </div>
+        <div class="text-right d-flex align-items-center">
+            <!-- Select de Filtro por Bairro -->
+            <form method="GET" action="" id="formFiltroBairroIndex" class="mr-3 mb-0">
+                <select name="bairro" class="custom-select" style="border-radius: 20px; font-weight: bold; background-color: #f4f6f9; color: #2c3e50; min-width: 260px; height: 45px; line-height: 1.5; padding: 8px 30px 8px 20px; cursor: pointer; border: 1px solid #ced4da; font-size: 15px;" onchange="document.getElementById('formFiltroBairroIndex').submit()">
+                    <option value="">🌎 Todos os Bairros (Geral)</option>
+                    {% for b in bairros_disponiveis %}
+                        <option value="{{ b }}" {% if b == bairro_selecionado %}selected{% endif %}>
+                            📍 {{ b }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+            {% if bairro_selecionado %}
+                <a href="?" class="btn btn-sm btn-outline-danger mr-2" style="border-radius: 20px;" title="Limpar Filtro"><i class="fas fa-times"></i></a>
+            {% endif %}
+            
+            <a href="/api/exportar-pdf/" class="btn btn-primary shadow-sm" target="_blank">
+                <i class="fas fa-file-pdf mr-2"></i> Gerar Relatório de Gestão
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="row">
+        <div class="col-lg-3 col-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Total Relatos</p>
+                        <h3>{{ total_relatos }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-blue"><i class="fas fa-bullhorn"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Resolvidos</p>
+                        <h3>{{ resolvidos }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-green"><i class="fas fa-check-circle"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Em Andamento</p>
+                        <h3>{{ em_andamento }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-purple"><i class="fas fa-tools"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-6">
+            <div class="kpi-card">
+                <div class="card-body">
+                    <div class="kpi-info">
+                        <p>Pendentes</p>
+                        <h3>{{ pendentes }}</h3>
+                    </div>
+                    <div class="kpi-icon bg-grad-orange"><i class="fas fa-clock"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="chart-card">
+                <div class="card-header"><h5 class="card-title">Evolução dos Chamados (30 dias)</h5></div>
+                <div class="card-body"><canvas id="evolucaoChart" style="height: 220px;"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="chart-card">
+                <div class="card-header"><h5 class="card-title">Distribuição por Status</h5></div>
+                <div class="card-body"><canvas id="statusChart" style="height: 220px;"></canvas></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map Row -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title">Mapa de Calor Urbana</h5>
+                    <span class="badge badge-primary">INTELIGÊNCIA GEOGRÁFICA</span>
+                </div>
+                <div class="card-body">
+                    <div id="heatmap" style="width: 100%; height: 350px; border-radius: 8px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<hr style="border-top: 2px dashed #dcdde1; margin: 20px 0;">
+<h4 class="mb-3" style="font-weight: 700; color: #34495e;"><i class="fas fa-folder-open mr-2"></i>Gestão de Módulos</h4>
+
+{{ block.super }}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const colors = { blue: '#3498db', green: '#2ecc71', purple: '#9b59b6', orange: '#f39c12', red: '#e74c3c' };
+
+        try {
+            // 1. Evolução
+            const evolData = JSON.parse('{{ evolucao_stats_json|safe }}');
+            if (evolData.length > 0) {
+                new Chart(document.getElementById('evolucaoChart'), {
+                    type: 'line',
+                    data: {
+                        labels: evolData.map(d => d.data),
+                        datasets: [{
+                            label: 'Novos Relatos',
+                            data: evolData.map(d => d.total),
+                            borderColor: colors.blue,
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            fill: true, tension: 0.4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
+
+            // 2. Status
+            const statusRaw = JSON.parse('{{ status_stats_json|safe }}');
+            if (statusRaw.length > 0) {
+                const statusLabelsMap = { 'recebido': 'Pendente', 'em_analise': 'Em Análise', 'equipe_despachada': 'No Local', 'resolvido': 'Resolvido', 'rejeitado': 'Rejeitado' };
+                const statusColorsMap = { 'recebido': '#7f8c8d', 'em_analise': '#3498db', 'equipe_despachada': '#f1c40f', 'resolvido': '#2ecc71', 'rejeitado': '#e74c3c' };
+
+                new Chart(document.getElementById('statusChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: statusRaw.map(s => statusLabelsMap[s.status_atual] || s.status_atual),
+                        datasets: [{
+                            data: statusRaw.map(s => s.total),
+                            backgroundColor: statusRaw.map(s => statusColorsMap[s.status_atual] || colors.blue)
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            // 3. Heatmap
+            const heatmapPoints = JSON.parse('{{ heatmap_data_json|safe }}');
+            if (heatmapPoints.length > 0) {
+                var map = L.map('heatmap').setView([-22.919, -42.818], 12);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                const markerCoords = [];
+                const heatPoints = [];
+                heatmapPoints.forEach(p => {
+                    const lat = parseFloat(p.latitude); const lng = parseFloat(p.longitude);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        L.circleMarker([lat, lng], { radius: 6, fillColor: "#e74c3c", color: "#fff", weight: 2, fillOpacity: 0.8 }).addTo(map);
+                        markerCoords.push([lat, lng]);
+                        heatPoints.push([lat, lng, 0.8]);
+                    }
+                });
+                if (markerCoords.length > 0) { map.fitBounds(L.latLngBounds(markerCoords), { padding: [30, 30] }); }
+                if (typeof L.heatLayer === 'function') { L.heatLayer(heatPoints, { radius: 25, blur: 15, maxZoom: 15 }).addTo(map); }
+            }
+        } catch (e) { console.error("Erro Dashboard Admin:", e); }
+    });
+</script>
+{% endblock %}

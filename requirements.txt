@@ -10,3 +10,5 @@ dj-database-url
 psycopg2-binary
 whitenoise
 google-generativeai
+fpdf2
+pywebpush
