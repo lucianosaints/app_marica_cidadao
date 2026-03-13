@@ -7,8 +7,7 @@ services:
     volumes:
       - .:/app
       - ./media:/app/media
-    ports:
-      - "8000:8000"
+      - static_volume:/app/staticfiles
     env_file:
       - .env
     environment:
@@ -25,5 +24,32 @@ services:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=marica_pass
 
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./media:/app/media
+      - static_volume:/app/staticfiles
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - web-root:/var/www/certbot
+    depends_on:
+      - web
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - web-root:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
 volumes:
   postgres_data:
+  static_volume:
+  certbot-etc:
+  certbot-var:
+  web-root:
