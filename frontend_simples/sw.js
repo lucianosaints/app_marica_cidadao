@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marica-cidadao-v4';
+const CACHE_NAME = 'marica-cidadao-v5';
 const urlsToCache = [
   '/',
   '/logo/Logo-prefeitura.png',
