@@ -1282,10 +1282,10 @@
             padding: '10px 15px', borderRadius: '18px', boxShadow: '0 8px 32px var(--card-shadow)',
             marginBottom: '15px', marginTop: '5px', width: '100%', boxSizing: 'border-box'
           }}>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '24px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
-              <div style={{ width: '1px', height: '20px', backgroundColor: 'var(--border-color)' }}></div>
-              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '22px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <img src="logo/Logo-prefeitura.png" alt="P" style={{ height: '20px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
+              <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-color)' }}></div>
+              <img src="logo/Logo-Ictim.png" alt="I" style={{ height: '18px', filter: document.body.classList.contains('dark-theme') ? 'brightness(0) invert(1)' : 'none' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '5px' }}>
@@ -1409,6 +1409,9 @@
             {!carregando && relatosFiltrados.length === 0 && (
               <div style={{ textAlign: 'center', color: 'white', padding: '30px' }}>Nenhum protocolo encontrado.</div>
             )}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '30px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>
+            🚀 Maricá Cidadão v5.2
           </div>
         </div>
       );
