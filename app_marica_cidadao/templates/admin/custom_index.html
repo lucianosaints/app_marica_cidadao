@@ -37,8 +37,8 @@
             <form method="GET" action="" id="formFiltroBairroIndex" class="mr-3 mb-0">
                 <select name="bairro" class="custom-select" style="border-radius: 20px; font-weight: bold; background-color: #f4f6f9; color: #2c3e50; min-width: 260px; height: 45px; line-height: 1.5; padding: 8px 30px 8px 20px; cursor: pointer; border: 1px solid #ced4da; font-size: 15px;" onchange="document.getElementById('formFiltroBairroIndex').submit()">
                     <option value="">🌎 Todos os Bairros (Geral)</option>
-                    {% for b in bairros_disponiveis %}
-                        <option value="{{ b }}" {% if b == bairro_selecionado %}selected{% endif %}>
+                    {% for b in stats.bairros_disponiveis %}
+                        <option value="{{ b }}" {% if b == stats.bairro_selecionado %}selected{% endif %}>
                             📍 {{ b }}
                         </option>
                     {% endfor %}
@@ -61,7 +61,7 @@
                 <div class="card-body">
                     <div class="kpi-info">
                         <p>Total Relatos</p>
-                        <h3>{{ total_relatos }}</h3>
+                        <h3>{{ stats.total_relatos }}</h3>
                     </div>
                     <div class="kpi-icon bg-grad-blue"><i class="fas fa-bullhorn"></i></div>
                 </div>
@@ -72,7 +72,7 @@
                 <div class="card-body">
                     <div class="kpi-info">
                         <p>Resolvidos</p>
-                        <h3>{{ resolvidos }}</h3>
+                        <h3>{{ stats.resolvidos }}</h3>
                     </div>
                     <div class="kpi-icon bg-grad-green"><i class="fas fa-check-circle"></i></div>
                 </div>
@@ -83,7 +83,7 @@
                 <div class="card-body">
                     <div class="kpi-info">
                         <p>Em Andamento</p>
-                        <h3>{{ em_andamento }}</h3>
+                        <h3>{{ stats.em_andamento }}</h3>
                     </div>
                     <div class="kpi-icon bg-grad-purple"><i class="fas fa-tools"></i></div>
                 </div>
@@ -94,7 +94,7 @@
                 <div class="card-body">
                     <div class="kpi-info">
                         <p>Pendentes</p>
-                        <h3>{{ pendentes }}</h3>
+                        <h3>{{ stats.pendentes }}</h3>
                     </div>
                     <div class="kpi-icon bg-grad-orange"><i class="fas fa-clock"></i></div>
                 </div>
@@ -150,7 +150,7 @@
 
         try {
             // 1. Evolução
-            const evolData = JSON.parse('{{ evolucao_stats_json|safe }}');
+            const evolData = JSON.parse('{{ stats.evolucao_stats_json|safe }}');
             if (evolData.length > 0) {
                 new Chart(document.getElementById('evolucaoChart'), {
                     type: 'line',
@@ -169,7 +169,7 @@
             }
 
             // 2. Status
-            const statusRaw = JSON.parse('{{ status_stats_json|safe }}');
+            const statusRaw = JSON.parse('{{ stats.status_stats_json|safe }}');
             if (statusRaw.length > 0) {
                 const statusLabelsMap = { 'recebido': 'Pendente', 'em_analise': 'Em Análise', 'equipe_despachada': 'No Local', 'resolvido': 'Resolvido', 'rejeitado': 'Rejeitado' };
                 const statusColorsMap = { 'recebido': '#7f8c8d', 'em_analise': '#3498db', 'equipe_despachada': '#f1c40f', 'resolvido': '#2ecc71', 'rejeitado': '#e74c3c' };
@@ -188,7 +188,7 @@
             }
 
             // 3. Heatmap
-            const heatmapPoints = JSON.parse('{{ heatmap_data_json|safe }}');
+            const heatmapPoints = JSON.parse('{{ stats.heatmap_data_json|safe }}');
             if (heatmapPoints.length > 0) {
                 var map = L.map('heatmap').setView([-22.919, -42.818], 12);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);

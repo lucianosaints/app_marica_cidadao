@@ -83,7 +83,7 @@ class RelatoZeladoriaSerializer(serializers.ModelSerializer):
         model = RelatoZeladoria
         fields = [
             'id', 'categoria', 'categoria_nome', 'categoria_emoji', 'descricao', 'foto_problema',
-            'endereco_aproximado', 'status_atual', 'status_display', 'criado_em',
+            'endereco_aproximado', 'bairro', 'status_atual', 'status_display', 'criado_em',
             'historico', 'latitude', 'longitude', 'avaliacao', 'comentario_cidadao',
             'e_propriedade_privada', 'comprovante_titularidade', 'aceite_termo_ambiental',
             'prioridade', 'justificativa_ia'
