@@ -41,6 +41,12 @@ CORS_ALLOW_CREDENTIALS = True
 # Essencial para rodar atrás de ngrok/proxy HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://maricacidadao.duckdns.org",
+    "https://*.ngrok-free.app",
+]
 
 
 # Application definition
@@ -151,23 +157,17 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Servir o frontend_simples via WhiteNoise
 WHITENOISE_ROOT = BASE_DIR / "frontend_simples"
 
+# Configuração do CORS
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Configuração de Media (Uploads de Arquivos e Imagens)
 import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Configuração do CORS
-CORS_ALLOW_ALL_ORIGINS = True
-
+# Configuração de Origens Confiáveis (CSRF)
 CSRF_TRUSTED_ORIGINS = [
-    "https://*.ngrok.io",
-    "https://*.ngrok-free.app",
-    "https://*.ngrok-free.dev",
     "https://maricacidadao.duckdns.org",
-    "http://147.15.17.209:8000",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
 
