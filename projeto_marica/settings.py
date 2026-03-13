@@ -145,6 +145,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# Armazenamento otimizado para WhiteNoise (compressão e cache)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Servir o frontend_simples via WhiteNoise
 WHITENOISE_ROOT = BASE_DIR / "frontend_simples"
 
