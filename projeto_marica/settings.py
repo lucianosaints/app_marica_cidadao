@@ -33,7 +33,11 @@ VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
 VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='mailto:admin@marica.rj.gov.br')
 
 ALLOWED_HOSTS = [h.strip() for h in config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')]
-ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev']  # Permite domínios ngrok
+ALLOWED_HOSTS += ['.ngrok.io', '.ngrok-free.app', '.ngrok-free.dev', '147.15.17.209']  # Permite domínios ngrok e o IP da Oracle
+
+# Configurações de CORS
+CORS_ALLOW_ALL_ORIGINS = True  # Para facilitar o acesso mobile/externo
+CORS_ALLOW_CREDENTIALS = True
 
 # Essencial para rodar atrás de ngrok/proxy HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

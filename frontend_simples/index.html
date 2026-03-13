@@ -281,8 +281,8 @@
       return outputArray;
     }
 
-    // URL do Backend fixada para Ambiente Local
-    const API_BASE_URL = `http://127.0.0.1:8000`;
+    // URL do Backend identificada automaticamente
+    const API_BASE_URL = window.location.origin;
 
     // --- LÓGICA DE PERSISTÊNCIA OFFLINE (IndexedDB) ---
     const DB_NAME = 'MaricaCidadaoDB';
