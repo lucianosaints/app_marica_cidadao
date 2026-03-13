@@ -25,11 +25,11 @@
 
 {% block content %}
 <div class="dashboard-container">
-    {% get_admin_dashboard_stats as stats %}
+    {% get_admin_dashboard_stats bairro=bairro_selecionado as stats %}
     
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h3 style="font-weight: 800; color: #2d3436; margin: 0;">📊 Central de Inteligência Urbana</h3>
+            <h3 style="font-weight: 800; color: #2d3436; margin: 0;">📊 Central de Inteligência Urbana - Maricá</h3>
             <p class="text-muted small mb-0">Monitoramento estratégico da zeladoria municipal</p>
         </div>
         <div class="text-right d-flex align-items-center">

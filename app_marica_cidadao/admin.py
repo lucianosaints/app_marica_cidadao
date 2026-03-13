@@ -33,7 +33,7 @@ class CategoriaProblemaAdmin(admin.ModelAdmin):
 @admin.register(RelatoZeladoria)
 class RelatoZeladoriaAdmin(admin.ModelAdmin):
     list_display = ('id_protocolo', 'prioridade_badge', 'status_badge', 'categoria_com_emoji', 'cidadao', 'criado_em')
-    list_filter = ('status_atual', 'prioridade', 'categoria', 'criado_em')
+    list_filter = ('status_atual', 'prioridade', 'categoria', 'bairro', 'criado_em')
     search_fields = ('id', 'descricao', 'endereco_aproximado', 'cidadao__username', 'cidadao__first_name')
     readonly_fields = ('criado_em', 'atualizado_em', 'mapa_localizacao_v2', 'justificativa_ia', 'avaliacao_cidadao')
     inlines = [HistoricoStatusInline]
