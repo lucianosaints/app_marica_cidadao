@@ -1,4 +1,4 @@
-const CACHE_NAME = 'marica-cidadao-v5';
+const CACHE_NAME = 'marica-cidadao-v6';
 const urlsToCache = [
   '/',
   '/logo/Logo-prefeitura.png',
@@ -11,6 +11,22 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
+      .then(() => self.skipWaiting()) // Força o novo SW a assumir imediatamente
+  );
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Limpando cache antigo:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim()) // Garante que o SW controle todas as abas abertas
   );
 });
 

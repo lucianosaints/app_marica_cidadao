@@ -165,6 +165,10 @@ import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Limites de upload aumentados para 20MB (padrão é 2.5MB)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20971520
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20971520
+
 # Configuração de Origens Confiáveis (CSRF)
 CSRF_TRUSTED_ORIGINS = [
     "https://maricacidadao.duckdns.org",

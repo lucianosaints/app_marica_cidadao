@@ -131,14 +131,18 @@ class RelatoZeladoriaViewSet(viewsets.ModelViewSet):
 @csrf_exempt
 def frontend_view(request):
     """
-    Serve o arquivo index.html do frontend sem usar o motor de templates do Django,
-    evitando conflitos com a sintaxe JSX (chaves duplas).
+    Serve o arquivo index.html do frontend com headers que forçam a atualização (Bypass Cache).
     """
     index_path = os.path.join(settings.BASE_DIR, 'frontend_simples', 'index.html')
     try:
         with open(index_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        return HttpResponse(content, content_type='text/html')
+        response = HttpResponse(content, content_type='text/html')
+        # Força o navegador a sempre perguntar ao servidor se o arquivo mudou
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
     except FileNotFoundError:
         return HttpResponse("Frontend index.html não encontrado.", status=404)
 

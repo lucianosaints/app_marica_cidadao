@@ -16,6 +16,35 @@
   <link rel="apple-touch-icon" href="/logo/pwa_icon_512.jpg">
 
   <script>
+    // --- MECANISMO DE AUTO-LIMPEZA DE CACHE (NUCLEAR OPTION) ---
+    const CURRENT_VERSION = '1.0.8-FORCE';
+    const savedVersion = localStorage.getItem('marica_app_version');
+
+    if (savedVersion !== CURRENT_VERSION) {
+      console.log('Detectada versão antiga ou primeira instalação. Limpando tudo...');
+      
+      // 1. Desregistrar todos os Service Workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+
+      // 2. Limpar todos os Caches da API de Cache
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          for (let name of names) caches.delete(name);
+        });
+      }
+
+      // 3. Atualizar versão e recarregar
+      localStorage.setItem('marica_app_version', CURRENT_VERSION);
+      // Opcional: reload imediato se for transição crítica
+      // window.location.reload(true);
+    }
+
     // Inicialização imediata do tema para evitar flash de luz
     (function() {
       const savedTheme = localStorage.getItem('marica_theme');
@@ -26,7 +55,7 @@
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js?v=5')
+        navigator.serviceWorker.register('/sw.js?v=9')
           .then(reg => console.log('Service Worker registrado!', reg))
           .catch(err => console.log('Erro ao registrar SW:', err));
       });
@@ -571,39 +600,44 @@
             setStatusEnvio(`❌ Erro: ${Array.isArray(msgErro) ? msgErro[0] : 'Verifique se todos os campos estão preenchidos.'}`);
           }
         } catch (erro) {
-          console.error("Erro na requisição (provável offline):", erro);
+          console.error("Erro na requisição:", erro);
           
-          // Se falhou por rede, salva no IndexedDB
-          try {
-            const relatoOffline = {
-              descricao,
-              categoria,
-              endereco_aproximado: enderecoAproximado,
-              bairro,
-              latitude: parseFloat(localizacao.lat),
-              longitude: parseFloat(localizacao.lng),
-              foto_problema: foto, // IndexedDB suporta Blob/File
-              prioridade,
-              justificativa_ia: justificativaIa,
-              e_propriedade_privada: ePropriedadePrivada,
-              comprovante_titularidade: comprovante,
-              aceite_termo_ambiental: aceiteTermoAmbiental,
-              token // Guardamos o token para quando enviar
-            };
-            
-            await salvarRelatoOffline(relatoOffline);
-            setStatusEnvio('📵 Você está sem internet! O relato foi salvo no seu celular e será enviado automaticamente assim que a conexão voltar. ✅');
-            
-            // Limpa o formulário como se tivesse enviado
-            setDescricao('');
-            setEnderecoAproximado('');
-            setFoto(null);
-            setPreviewUrl(null);
-            setCategoria('');
-            setBairro('');
-          } catch (dbError) {
-            console.error("Erro ao salvar offline:", dbError);
-            setStatusEnvio(`❌ Erro crítico: ${erro.message}.`);
+          // Verifica se realmente está sem internet ou se foi outro erro de rede (ex: limite de tamanho excedido)
+          if (!navigator.onLine) {
+            try {
+              const relatoOffline = {
+                descricao,
+                categoria,
+                endereco_aproximado: enderecoAproximado,
+                bairro,
+                latitude: parseFloat(localizacao.lat),
+                longitude: parseFloat(localizacao.lng),
+                foto_problema: foto, // IndexedDB suporta Blob/File
+                prioridade,
+                justificativa_ia: justificativaIa,
+                e_propriedade_privada: ePropriedadePrivada,
+                comprovante_titularidade: comprovante,
+                aceite_termo_ambiental: aceiteTermoAmbiental,
+                token // Guardamos o token para quando enviar
+              };
+              
+              await salvarRelatoOffline(relatoOffline);
+              setStatusEnvio('📵 Você está sem internet! O relato foi salvo no seu celular e será enviado automaticamente assim que a conexão voltar. ✅');
+              
+              // Limpa o formulário como se tivesse enviado
+              setDescricao('');
+              setEnderecoAproximado('');
+              setFoto(null);
+              setPreviewUrl(null);
+              setCategoria('');
+              setBairro('');
+            } catch (dbError) {
+              console.error("Erro ao salvar offline:", dbError);
+              setStatusEnvio(`❌ Erro técnico: ${dbError.message}.`);
+            }
+          } else {
+            // Se está online mas deu erro no fetch, provavelmente o arquivo é muito grande ou o servidor caiu
+            setStatusEnvio(`❌ Falha na conexão: O arquivo pode ser muito grande ou o servidor está instável. Tente novamente em instantes.`);
           }
         }
       };
@@ -692,7 +726,8 @@
 
           <div className="formulario-container" style={{ width: '100%', maxWidth: '100%', padding: '25px 20px', margin: '0 auto' }}>
             <h1 style={{ color: '#2c3e50', margin: '0 0 10px 0', fontSize: '20px', textAlign: 'center' }}>Novo Relato de Zeladoria</h1>
-            <p style={{ color: '#7f8c8d', marginBottom: '25px', textAlign: 'center', fontSize: '14px' }}>Preencha os dados abaixo para informar um problema à prefeitura.</p>
+            <p style={{ color: '#7f8c8d', marginBottom: '10px', textAlign: 'center', fontSize: '14px' }}>Preencha os dados abaixo para informar um problema à prefeitura.</p>
+            <p style={{ color: '#bdc3c7', fontSize: '10px', textAlign: 'center', marginBottom: '15px' }}>Versão do App: 1.0.8-FORCE</p>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ backgroundColor: '#f8f9fa', padding: '20px', borderRadius: '12px', border: '1px solid #edf2f7' }}>
@@ -1411,7 +1446,7 @@
             )}
           </div>
           <div style={{ textAlign: 'center', marginTop: '40px', paddingBottom: '30px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>
-            🚀 Maricá Cidadão v5.2
+            🚀 Maricá Cidadão v1.0.8-FORCE
           </div>
         </div>
       );
